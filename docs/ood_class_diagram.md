@@ -108,4 +108,4 @@ classDiagram
 - 좌/우/먼지 값은 `tick(PeriodicSensorData)` 호출마다 controller에 전달한다.
 - `readPeriodicSensors()`는 pending front interrupt와 periodic 값을 결합하여 `SensorSnapshot`을 만든다.
 - `decideNextCommand()`는 단일 판단 지점으로 두어 테스트를 쉽게 한다.
-- `Escaping` 상태에서 삼방향이 계속 막혀 있으면 반드시 `Backward` command를 반복한다.
+- `Escaping` 상태에서 좌/우가 계속 막혀 있으면 전방 interrupt 여부와 관계없이 반드시 `Backward` command를 반복한다.

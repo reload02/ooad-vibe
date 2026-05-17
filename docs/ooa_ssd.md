@@ -101,10 +101,10 @@ sequenceDiagram
     System->>RightSensor: readRightObstacle()
     RightSensor-->>System: rightObstacle = true
     System->>System: enterEscaping()
-    loop while front, left, and right are blocked
+    loop while left and right are blocked
         System->>Motor: moveBackward()
         Clock->>System: tick()
-        opt front is still blocked
+        opt front is blocked
             FrontSensor->>System: onFrontObstacleInterrupt()
         end
         System->>LeftSensor: readLeftObstacle()
@@ -112,9 +112,7 @@ sequenceDiagram
         System->>RightSensor: readRightObstacle()
         RightSensor-->>System: rightObstacle
     end
-    alt front is open
-        System->>Motor: moveForward()
-    else side is open
+    alt side is open
         System->>Motor: turn(openDirection)
     end
 ```

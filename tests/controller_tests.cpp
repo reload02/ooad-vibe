@@ -99,7 +99,7 @@ TEST(RvcControllerTest, AllBlockedEntersEscapingAndKeepsBackingUp) {
     EXPECT_EQ(controller.state(), ControllerState::Escaping);
 }
 
-TEST(RvcControllerTest, EscapingExitsWhenFrontBecomesOpen) {
+TEST(RvcControllerTest, EscapingIgnoresOpenFrontUntilSideOpens) {
     RvcController controller;
     controller.startCleaning();
     controller.onFrontObstacleInterrupt();
@@ -110,14 +110,23 @@ TEST(RvcControllerTest, EscapingExitsWhenFrontBecomesOpen) {
         .dustDetected = false,
     });
 
-    const Command command = controller.tick(PeriodicSensorData{
+    const Command stillEscaping = controller.tick(PeriodicSensorData{
         .leftObstacle = true,
         .rightObstacle = true,
         .dustDetected = false,
     });
 
-    EXPECT_EQ(command.motion, Motion::Forward);
-    EXPECT_EQ(controller.state(), ControllerState::Cleaning);
+    EXPECT_EQ(stillEscaping.motion, Motion::Backward);
+    EXPECT_EQ(controller.state(), ControllerState::Escaping);
+
+    const Command sideExit = controller.tick(PeriodicSensorData{
+        .leftObstacle = false,
+        .rightObstacle = true,
+        .dustDetected = false,
+    });
+
+    EXPECT_EQ(sideExit.motion, Motion::TurnLeft);
+    EXPECT_EQ(controller.state(), ControllerState::Avoiding);
 }
 
 TEST(RvcControllerTest, DustBoostLastsConfiguredTicks) {

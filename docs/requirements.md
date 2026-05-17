@@ -6,7 +6,7 @@
 
 - 전방 센서는 interrupt 방식으로 동작한다.
 - 좌측 센서, 우측 센서, 먼지 센서는 periodic 방식으로 동작한다.
-- 전방, 좌측, 우측이 모두 막힌 경우 RVC는 탈출 가능할 때까지 계속 후진한다.
+- 전방, 좌측, 우측이 모두 막힌 경우 RVC는 좌/우 중 한쪽이 열릴 때까지 계속 후진한다.
 - 하드웨어의 상세 제어 설계는 범위 밖이며, 제어 소프트웨어는 추상화된 센서 입력과 동작 명령을 다룬다.
 
 ## 2. Actors
@@ -62,7 +62,7 @@
 | Primary Actor | Front Sensor, Left Sensor, Right Sensor |
 | Goal | 전방, 좌측, 우측이 모두 막힌 상황에서 탈출한다. |
 | Precondition | RVC가 자동 청소 중이며 삼방향이 모두 막혀 있다. |
-| Main Flow | System은 `Escaping` 상태로 전환한다. 전방, 좌측, 우측 중 하나 이상이 열릴 때까지 계속 후진한다. 탈출 가능해지면 열린 방향으로 회전하거나 전방으로 진행하고 청소를 재개한다. |
+| Main Flow | System은 `Escaping` 상태로 전환한다. 좌측 또는 우측이 열릴 때까지 계속 후진한다. 탈출 가능해지면 열린 방향으로 회전하고 청소를 재개한다. 후진 직후 전방이 열리더라도 좌/우가 모두 막혀 있으면 탈출 가능 상태로 보지 않는다. |
 | Postcondition | RVC는 탈출 가능 위치로 이동한 뒤 자동 청소를 계속한다. |
 
 ### UC-05 Boost Cleaning On Dust
@@ -99,9 +99,9 @@
 | FR-08 | If front is blocked and only right is open, System shall turn right. | UC-03 |
 | FR-09 | If front is blocked and both left and right are open, System shall choose turn direction by alternating left and right. | UC-03 |
 | FR-10 | If front, left, and right are all blocked, System shall enter `Escaping` state. | UC-04 |
-| FR-11 | In `Escaping` state, System shall keep moving backward until escape is possible. | UC-04 |
-| FR-12 | Escape shall be considered possible when at least one of front, left, and right is open. | UC-04 |
-| FR-13 | After escape becomes possible, System shall turn toward an open side or move forward if front is open. | UC-04 |
+| FR-11 | In `Escaping` state, System shall keep moving backward while both left and right are blocked. | UC-04 |
+| FR-12 | Escape shall be considered possible only when at least one of left or right is open. | UC-04 |
+| FR-13 | After escape becomes possible, System shall turn toward an open side. | UC-04 |
 | FR-14 | If dust is detected, System shall set cleaner power to boost for a configured number of ticks. | UC-05 |
 | FR-15 | If boost duration expires and no new dust is detected, System shall return cleaner power to normal. | UC-05 |
 | FR-16 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | UC-06 |
@@ -131,7 +131,7 @@
 4. 전방 장애물이 있고 좌/우 중 한쪽만 열려 있으면 열린 방향으로 회전한 뒤 전진 청소를 재개한다.
 5. 전방 장애물이 있고 좌/우가 모두 열려 있으면 기본 회전 정책에 따라 방향을 선택한다. 기본값은 좌우 번갈아 선택이다.
 6. 전방, 좌측, 우측이 모두 막혀 있으면 `Escaping` 상태로 진입한다.
-7. `Escaping` 상태에서는 탈출 가능할 때까지 계속 후진한다.
-8. 탈출 가능 조건은 전방, 좌측, 우측 중 하나 이상이 열린 상태로 정의한다.
-9. 탈출 가능해지면 열린 방향으로 회전하고 전진 청소를 재개한다. 전방이 열려 있으면 바로 전진한다.
+7. `Escaping` 상태에서는 좌/우 중 한쪽이 열릴 때까지 계속 후진한다.
+8. 탈출 가능 조건은 좌측 또는 우측 중 하나 이상이 열린 상태로 정의한다. 전방은 후진 직후 자연스럽게 열릴 수 있으므로 `Escaping` 상태의 탈출 판단에 사용하지 않는다.
+9. 탈출 가능해지면 열린 방향으로 회전하고 전진 청소를 재개한다.
 10. 먼지가 감지되면 일정 tick 동안 청소 세기를 높이고, 시간이 끝나면 기본 세기로 복귀한다.
