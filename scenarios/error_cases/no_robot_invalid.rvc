@@ -1,0 +1,6 @@
+# 오류 기대 / UC-06 / FR-16
+# 로봇 마커가 없으므로 loadScenario 후 fromLines에서 실패해야 한다.
+ticks=1
+map:
+...
+...

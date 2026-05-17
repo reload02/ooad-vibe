@@ -1,0 +1,4 @@
+# 오류 기대 / UC-06 / FR-16
+# map 섹션은 있지만 실제 지도 행이 없으므로 loadScenario에서 실패해야 한다.
+ticks=1
+map:
