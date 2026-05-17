@@ -120,9 +120,11 @@ Motion RvcController::chooseOpenSideTurn(bool leftObstacle, bool rightObstacle) 
 }
 
 Command RvcController::makeCommand(Motion motion, CleaningPower power, std::string reason) const {
+    const CleaningPower outputPower = motion == Motion::Forward ? power : CleaningPower::Off;
+
     return Command{
         .motion = motion,
-        .cleaningPower = power,
+        .cleaningPower = outputPower,
         .reason = std::move(reason),
     };
 }
