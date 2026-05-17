@@ -49,6 +49,25 @@ TEST(RvcSystemTest, SimulatorUsesBackwardEscape) {
     EXPECT_EQ(result.finalDirection, Direction::North);
 }
 
+TEST(RvcSystemTest, SimulatorKeepsCommandingBackwardWhenBoxedIn) {
+    GridSimulator simulator = GridSimulator::fromLines({
+        "#####",
+        "#####",
+        "##^##",
+        "#####",
+        "#####",
+    });
+
+    const rvc::SimulationResult result = simulator.run(5, false);
+    const int backwardCommands = static_cast<int>(std::count_if(result.logs.begin(), result.logs.end(), [](const auto& line) {
+        return line.find("motion=Backward") != std::string::npos;
+    }));
+
+    EXPECT_EQ(backwardCommands, 5);
+    EXPECT_EQ(result.finalPosition, (Position{2, 2}));
+    EXPECT_EQ(result.finalDirection, Direction::North);
+}
+
 TEST(RvcSystemTest, SimulatorTurnsAfterFrontInterrupt) {
     GridSimulator simulator = GridSimulator::fromLines({
         "#####",

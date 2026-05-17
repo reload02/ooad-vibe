@@ -58,4 +58,9 @@ if(BUILD_TESTING)
         NAME SimulatorCliDefaultRuns
         COMMAND $<TARGET_FILE:rvc_simulator> --ticks 5 --quiet-map
     )
+
+    add_test(
+        NAME SimulatorCliContinuousBackwardScenarioRuns
+        COMMAND $<TARGET_FILE:rvc_simulator> --scenario ${CMAKE_CURRENT_SOURCE_DIR}/scenarios/continuous_backward.rvc --quiet-map
+    )
 endif()

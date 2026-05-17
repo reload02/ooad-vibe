@@ -30,6 +30,7 @@ ctest --test-dir build -C Debug --output-on-failure
 build\Debug\rvc_simulator.exe --ticks 10
 build\Debug\rvc_simulator.exe --scenario scenarios\dust_and_interrupt.rvc --quiet-map
 build\Debug\rvc_simulator.exe --scenario scenarios\backward_escape.rvc --quiet-map
+build\Debug\rvc_simulator.exe --scenario scenarios\continuous_backward.rvc --quiet-map
 ```
 
 ## Scenario Format
