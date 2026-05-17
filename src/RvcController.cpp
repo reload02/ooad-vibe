@@ -51,16 +51,12 @@ Command RvcController::decideNextCommand(const SensorSnapshot& snapshot) {
     }
 
     const CleaningPower power = updateCleaningPower(snapshot.dustDetected);
-    const bool allBlocked = snapshot.frontObstacle && snapshot.leftObstacle && snapshot.rightObstacle;
+    const bool sidesBlocked = snapshot.leftObstacle && snapshot.rightObstacle;
+    const bool allBlocked = snapshot.frontObstacle && sidesBlocked;
 
     if (state_ == ControllerState::Escaping) {
-        if (allBlocked) {
-            return makeCommand(Motion::Backward, power, "escaping: keep backing up until an exit opens");
-        }
-
-        state_ = ControllerState::Cleaning;
-        if (!snapshot.frontObstacle) {
-            return makeCommand(Motion::Forward, power, "escaping: front opened, resume forward cleaning");
+        if (sidesBlocked) {
+            return makeCommand(Motion::Backward, power, "escaping: keep backing up until a side exit opens");
         }
 
         state_ = ControllerState::Avoiding;

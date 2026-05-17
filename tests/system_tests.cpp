@@ -68,6 +68,30 @@ TEST(RvcSystemTest, SimulatorKeepsCommandingBackwardWhenBoxedIn) {
     EXPECT_EQ(result.finalDirection, Direction::North);
 }
 
+TEST(RvcSystemTest, SimulatorKeepsBackingUpUntilSideExitOpens) {
+    GridSimulator simulator = GridSimulator::fromLines({
+        "#####",
+        "#####",
+        "##^##",
+        "##.##",
+        "##..#",
+        "#####",
+    });
+
+    const rvc::SimulationResult result = simulator.run(3, false);
+    const int backwardCommands = static_cast<int>(std::count_if(result.logs.begin(), result.logs.end(), [](const auto& line) {
+        return line.find("motion=Backward") != std::string::npos;
+    }));
+
+    EXPECT_EQ(backwardCommands, 2);
+    EXPECT_TRUE(containsLog(result.logs, "tick=2 frontInterrupt=false"));
+    EXPECT_TRUE(containsLog(result.logs, "tick=2 frontInterrupt=false leftPeriodic=blocked rightPeriodic=blocked"));
+    EXPECT_TRUE(containsLog(result.logs, "tick=3 frontInterrupt=false leftPeriodic=blocked rightPeriodic=open"));
+    EXPECT_TRUE(containsLog(result.logs, "motion=TurnRight"));
+    EXPECT_EQ(result.finalPosition, (Position{4, 2}));
+    EXPECT_EQ(result.finalDirection, Direction::East);
+}
+
 TEST(RvcSystemTest, SimulatorTurnsAfterFrontInterrupt) {
     GridSimulator simulator = GridSimulator::fromLines({
         "#####",

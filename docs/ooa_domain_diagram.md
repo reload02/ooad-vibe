@@ -103,5 +103,5 @@ classDiagram
 - FrontSensor는 polling 대상이 아니라 interrupt source이다.
 - LeftSensor, RightSensor, DustSensor는 DigitalClock tick에 맞춰 sampling된다.
 - RvcController는 sensor와 actuator의 구체 구현을 알지 않는다.
-- `Escaping` 상태에서는 후방 센서 없이 backward command를 반복한다.
+- `Escaping` 상태에서는 후방 센서 없이 backward command를 반복하며, 좌/우 중 한쪽이 열릴 때까지 전방 open 여부를 탈출 조건으로 사용하지 않는다.
 - Simulator의 Environment는 실제 하드웨어가 아니라 테스트용 외부 세계이다.

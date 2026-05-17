@@ -89,15 +89,12 @@ sequenceDiagram
     Simulator->>Controller: tick(allBlockedSnapshot)
     Controller->>Controller: enter Escaping
     Controller-->>Simulator: Command(Backward)
-    loop while front, left, and right are blocked
-        Simulator->>Controller: tick(allBlockedSnapshot)
+    loop while left and right are blocked
+        Simulator->>Controller: tick(sideBlockedSnapshot)
         Controller-->>Simulator: Command(Backward)
     end
-    Simulator->>Controller: tick(escapePossibleSnapshot)
-    alt front is open
-        Controller->>Controller: state = Cleaning
-        Controller-->>Simulator: Command(Forward)
-    else left is open
+    Simulator->>Controller: tick(sideExitSnapshot)
+    alt left is open
         Controller->>Controller: state = Avoiding
         Controller-->>Simulator: Command(TurnLeft)
     else right is open
