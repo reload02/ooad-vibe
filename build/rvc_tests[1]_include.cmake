@@ -1,5 +1,0 @@
-if(EXISTS "C:/Users/re-ro/Desktop/ooad-vibe/build/rvc_tests[1]_tests.cmake")
-  include("C:/Users/re-ro/Desktop/ooad-vibe/build/rvc_tests[1]_tests.cmake")
-else()
-  add_test(rvc_tests_NOT_BUILT rvc_tests_NOT_BUILT)
-endif()
