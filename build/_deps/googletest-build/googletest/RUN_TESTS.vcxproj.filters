@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\re-ro\Desktop\ooad-vibe\build\CMakeFiles\7fff4a81d0ad1848b593388a32cbb624\RUN_TESTS_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{5F54D950-2636-308E-A3D0-4A9C34CF2884}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

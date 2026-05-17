@@ -1,0 +1,12 @@
+RvcControllerTest.ControllerMovesForwardWhenPathIsClear 2 0.0079316
+RvcControllerTest.FrontInterruptTriggersImmediateAvoidance 2 0.0080378
+RvcControllerTest.TurnsTowardOpenSide 2 0.00807275
+RvcControllerTest.AlternatesWhenBothSidesAreOpen 2 0.00770945
+RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp 2 0.00757275
+RvcControllerTest.EscapingExitsWhenFrontBecomesOpen 2 0.00849355
+RvcControllerTest.DustBoostLastsConfiguredTicks 2 0.0079625
+RvcSystemTest.SimulatorCleansDustAndLogsCommands 2 0.00734435
+RvcSystemTest.SimulatorUsesBackwardEscape 2 0.00708725
+RvcSystemTest.SimulatorTurnsAfterFrontInterrupt 2 0.0082545
+SimulatorCliDefaultRuns 2 0.0198095
+---

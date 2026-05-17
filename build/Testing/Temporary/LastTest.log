@@ -1,0 +1,294 @@
+Start testing: May 17 20:32 대한민국 표준시
+----------------------------------------------------------
+1/11 Testing: RvcControllerTest.ControllerMovesForwardWhenPathIsClear
+1/11 Test: RvcControllerTest.ControllerMovesForwardWhenPathIsClear
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcControllerTest.ControllerMovesForwardWhenPathIsClear" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcControllerTest.ControllerMovesForwardWhenPathIsClear" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcControllerTest.ControllerMovesForwardWhenPathIsClear
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcControllerTest
+[ RUN      ] RvcControllerTest.ControllerMovesForwardWhenPathIsClear
+[       OK ] RvcControllerTest.ControllerMovesForwardWhenPathIsClear (0 ms)
+[----------] 1 test from RvcControllerTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"RvcControllerTest.ControllerMovesForwardWhenPathIsClear" end time: May 17 20:32 대한민국 표준시
+"RvcControllerTest.ControllerMovesForwardWhenPathIsClear" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/11 Testing: RvcControllerTest.FrontInterruptTriggersImmediateAvoidance
+2/11 Test: RvcControllerTest.FrontInterruptTriggersImmediateAvoidance
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcControllerTest.FrontInterruptTriggersImmediateAvoidance" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcControllerTest.FrontInterruptTriggersImmediateAvoidance" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcControllerTest.FrontInterruptTriggersImmediateAvoidance
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcControllerTest
+[ RUN      ] RvcControllerTest.FrontInterruptTriggersImmediateAvoidance
+[       OK ] RvcControllerTest.FrontInterruptTriggersImmediateAvoidance (0 ms)
+[----------] 1 test from RvcControllerTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"RvcControllerTest.FrontInterruptTriggersImmediateAvoidance" end time: May 17 20:32 대한민국 표준시
+"RvcControllerTest.FrontInterruptTriggersImmediateAvoidance" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/11 Testing: RvcControllerTest.TurnsTowardOpenSide
+3/11 Test: RvcControllerTest.TurnsTowardOpenSide
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcControllerTest.TurnsTowardOpenSide" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcControllerTest.TurnsTowardOpenSide" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcControllerTest.TurnsTowardOpenSide
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcControllerTest
+[ RUN      ] RvcControllerTest.TurnsTowardOpenSide
+[       OK ] RvcControllerTest.TurnsTowardOpenSide (0 ms)
+[----------] 1 test from RvcControllerTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"RvcControllerTest.TurnsTowardOpenSide" end time: May 17 20:32 대한민국 표준시
+"RvcControllerTest.TurnsTowardOpenSide" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/11 Testing: RvcControllerTest.AlternatesWhenBothSidesAreOpen
+4/11 Test: RvcControllerTest.AlternatesWhenBothSidesAreOpen
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcControllerTest.AlternatesWhenBothSidesAreOpen" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcControllerTest.AlternatesWhenBothSidesAreOpen" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcControllerTest.AlternatesWhenBothSidesAreOpen
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcControllerTest
+[ RUN      ] RvcControllerTest.AlternatesWhenBothSidesAreOpen
+[       OK ] RvcControllerTest.AlternatesWhenBothSidesAreOpen (0 ms)
+[----------] 1 test from RvcControllerTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"RvcControllerTest.AlternatesWhenBothSidesAreOpen" end time: May 17 20:32 대한민국 표준시
+"RvcControllerTest.AlternatesWhenBothSidesAreOpen" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/11 Testing: RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp
+5/11 Test: RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcControllerTest
+[ RUN      ] RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp
+[       OK ] RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp (0 ms)
+[----------] 1 test from RvcControllerTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp" end time: May 17 20:32 대한민국 표준시
+"RvcControllerTest.AllBlockedEntersEscapingAndKeepsBackingUp" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/11 Testing: RvcControllerTest.EscapingExitsWhenFrontBecomesOpen
+6/11 Test: RvcControllerTest.EscapingExitsWhenFrontBecomesOpen
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcControllerTest.EscapingExitsWhenFrontBecomesOpen" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcControllerTest.EscapingExitsWhenFrontBecomesOpen" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcControllerTest.EscapingExitsWhenFrontBecomesOpen
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcControllerTest
+[ RUN      ] RvcControllerTest.EscapingExitsWhenFrontBecomesOpen
+[       OK ] RvcControllerTest.EscapingExitsWhenFrontBecomesOpen (0 ms)
+[----------] 1 test from RvcControllerTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"RvcControllerTest.EscapingExitsWhenFrontBecomesOpen" end time: May 17 20:32 대한민국 표준시
+"RvcControllerTest.EscapingExitsWhenFrontBecomesOpen" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/11 Testing: RvcControllerTest.DustBoostLastsConfiguredTicks
+7/11 Test: RvcControllerTest.DustBoostLastsConfiguredTicks
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcControllerTest.DustBoostLastsConfiguredTicks" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcControllerTest.DustBoostLastsConfiguredTicks" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcControllerTest.DustBoostLastsConfiguredTicks
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcControllerTest
+[ RUN      ] RvcControllerTest.DustBoostLastsConfiguredTicks
+[       OK ] RvcControllerTest.DustBoostLastsConfiguredTicks (0 ms)
+[----------] 1 test from RvcControllerTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"RvcControllerTest.DustBoostLastsConfiguredTicks" end time: May 17 20:32 대한민국 표준시
+"RvcControllerTest.DustBoostLastsConfiguredTicks" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/11 Testing: RvcSystemTest.SimulatorCleansDustAndLogsCommands
+8/11 Test: RvcSystemTest.SimulatorCleansDustAndLogsCommands
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcSystemTest.SimulatorCleansDustAndLogsCommands" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcSystemTest.SimulatorCleansDustAndLogsCommands" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcSystemTest.SimulatorCleansDustAndLogsCommands
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcSystemTest
+[ RUN      ] RvcSystemTest.SimulatorCleansDustAndLogsCommands
+[       OK ] RvcSystemTest.SimulatorCleansDustAndLogsCommands (0 ms)
+[----------] 1 test from RvcSystemTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"RvcSystemTest.SimulatorCleansDustAndLogsCommands" end time: May 17 20:32 대한민국 표준시
+"RvcSystemTest.SimulatorCleansDustAndLogsCommands" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/11 Testing: RvcSystemTest.SimulatorUsesBackwardEscape
+9/11 Test: RvcSystemTest.SimulatorUsesBackwardEscape
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcSystemTest.SimulatorUsesBackwardEscape" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcSystemTest.SimulatorUsesBackwardEscape" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcSystemTest.SimulatorUsesBackwardEscape
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcSystemTest
+[ RUN      ] RvcSystemTest.SimulatorUsesBackwardEscape
+[       OK ] RvcSystemTest.SimulatorUsesBackwardEscape (0 ms)
+[----------] 1 test from RvcSystemTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"RvcSystemTest.SimulatorUsesBackwardEscape" end time: May 17 20:32 대한민국 표준시
+"RvcSystemTest.SimulatorUsesBackwardEscape" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/11 Testing: RvcSystemTest.SimulatorTurnsAfterFrontInterrupt
+10/11 Test: RvcSystemTest.SimulatorTurnsAfterFrontInterrupt
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_tests.exe" "--gtest_filter=RvcSystemTest.SimulatorTurnsAfterFrontInterrupt" "--gtest_also_run_disabled_tests"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"RvcSystemTest.SimulatorTurnsAfterFrontInterrupt" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+Running main() from C:\Users\re-ro\Desktop\ooad-vibe\build\_deps\googletest-src\googletest\src\gtest_main.cc
+Note: Google Test filter = RvcSystemTest.SimulatorTurnsAfterFrontInterrupt
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from RvcSystemTest
+[ RUN      ] RvcSystemTest.SimulatorTurnsAfterFrontInterrupt
+[       OK ] RvcSystemTest.SimulatorTurnsAfterFrontInterrupt (0 ms)
+[----------] 1 test from RvcSystemTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (0 ms total)
+[  PASSED  ] 1 test.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"RvcSystemTest.SimulatorTurnsAfterFrontInterrupt" end time: May 17 20:32 대한민국 표준시
+"RvcSystemTest.SimulatorTurnsAfterFrontInterrupt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/11 Testing: SimulatorCliDefaultRuns
+11/11 Test: SimulatorCliDefaultRuns
+Command: "C:/Users/re-ro/Desktop/ooad-vibe/build/Debug/rvc_simulator.exe" "--ticks" "5" "--quiet-map"
+Directory: C:/Users/re-ro/Desktop/ooad-vibe/build
+"SimulatorCliDefaultRuns" start time: May 17 20:32 대한민국 표준시
+Output:
+----------------------------------------------------------
+tick=1 frontInterrupt=false leftPeriodic=blocked rightPeriodic=blocked dustPeriodic=clear motion=Forward cleaner=Normal position=(3,3) direction=East cleaned=0 reason="front clear: forward cleaning"
+tick=2 frontInterrupt=false leftPeriodic=blocked rightPeriodic=open dustPeriodic=clear motion=Forward cleaner=Normal position=(3,4) direction=East cleaned=0 reason="front clear: forward cleaning"
+tick=3 frontInterrupt=false leftPeriodic=blocked rightPeriodic=open dustPeriodic=clear motion=Forward cleaner=Normal position=(3,5) direction=East cleaned=0 reason="front clear: forward cleaning"
+tick=4 frontInterrupt=true leftPeriodic=open rightPeriodic=blocked dustPeriodic=detected motion=TurnLeft cleaner=Boost position=(3,5) direction=North cleaned=1 reason="front interrupt: stop forward motion and turn"
+tick=5 frontInterrupt=false leftPeriodic=open rightPeriodic=blocked dustPeriodic=clear motion=Forward cleaner=Boost position=(2,5) direction=North cleaned=1 reason="front clear: forward cleaning"
+Summary ticks=5 dustCleaned=1 remainingDust=1 finalPosition=(2,5) finalDirection=North
+<end of output>
+Test time =   0.04 sec
+----------------------------------------------------------
+Test Passed.
+"SimulatorCliDefaultRuns" end time: May 17 20:32 대한민국 표준시
+"SimulatorCliDefaultRuns" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: May 17 20:32 대한민국 표준시
