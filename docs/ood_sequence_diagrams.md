@@ -65,17 +65,17 @@ sequenceDiagram
 
     Controller->>Controller: decideNextCommand(snapshot)
     alt front open
-        Controller-->>Controller: Command(Forward, currentCleanerPower)
+        Controller-->>Controller: Command(Forward, activeCleanerPower)
     else left open and right blocked
-        Controller-->>Controller: Command(TurnLeft, currentCleanerPower)
+        Controller-->>Controller: Command(TurnLeft, Off)
     else left blocked and right open
-        Controller-->>Controller: Command(TurnRight, currentCleanerPower)
+        Controller-->>Controller: Command(TurnRight, Off)
     else left open and right open
         Controller->>Controller: choose alternating turn direction
-        Controller-->>Controller: Command(TurnLeft or TurnRight, currentCleanerPower)
+        Controller-->>Controller: Command(TurnLeft or TurnRight, Off)
     else all front, left, and right blocked
         Controller->>Controller: state = Escaping
-        Controller-->>Controller: Command(Backward, currentCleanerPower)
+        Controller-->>Controller: Command(Backward, Off)
     end
 ```
 
@@ -88,18 +88,18 @@ sequenceDiagram
 
     Simulator->>Controller: tick(allBlockedSnapshot)
     Controller->>Controller: enter Escaping
-    Controller-->>Simulator: Command(Backward)
+    Controller-->>Simulator: Command(Backward, Off)
     loop while left and right are blocked
         Simulator->>Controller: tick(sideBlockedSnapshot)
-        Controller-->>Simulator: Command(Backward)
+        Controller-->>Simulator: Command(Backward, Off)
     end
     Simulator->>Controller: tick(sideExitSnapshot)
     alt left is open
         Controller->>Controller: state = Avoiding
-        Controller-->>Simulator: Command(TurnLeft)
+        Controller-->>Simulator: Command(TurnLeft, Off)
     else right is open
         Controller->>Controller: state = Avoiding
-        Controller-->>Simulator: Command(TurnRight)
+        Controller-->>Simulator: Command(TurnRight, Off)
     end
 ```
 
@@ -112,12 +112,20 @@ sequenceDiagram
 
     Simulator->>Controller: tick(dustDetected = true)
     Controller->>Controller: boostTicksRemaining = configured duration
-    Controller-->>Simulator: Command(anyMotion, Boost)
+    alt next motion is Forward
+        Controller-->>Simulator: Command(Forward, Boost)
+    else next motion is Backward or Turn
+        Controller-->>Simulator: Command(avoidanceMotion, Off)
+    end
     loop while boostTicksRemaining > 0
         Simulator->>Controller: tick(dustDetected = false)
         Controller->>Controller: decrement boostTicksRemaining
-        Controller-->>Simulator: Command(anyMotion, Boost)
+        alt next motion is Forward
+            Controller-->>Simulator: Command(Forward, Boost)
+        else next motion is Backward or Turn
+            Controller-->>Simulator: Command(avoidanceMotion, Off)
+        end
     end
     Simulator->>Controller: tick(dustDetected = false)
-    Controller-->>Simulator: Command(anyMotion, Normal)
+    Controller-->>Simulator: Command(Forward, Normal)
 ```

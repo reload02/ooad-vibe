@@ -2,7 +2,9 @@
 
 ## 1. Scope
 
-이 문서는 RVC(Robotic Vacuum Cleaner) 자동 청소 제어 소프트웨어의 유스케이스, 기능 요구사항, 비기능 요구사항을 정의한다. 요구사항의 기준은 `docs/rvc.pdf`의 RVC Control SW 설명이며, 다음 추가 조건을 포함한다.
+이 문서는 RVC(Robotic Vacuum Cleaner) 자동 청소 제어 소프트웨어의 유스케이스, 기능 요구사항, 비기능 요구사항을 정의한다. 요구사항의 기준은 `docs/rvc.pdf`의 RVC Control SW 설명이며, RVC는 household surface를 자동으로 청소하고 물걸레질하는 장치로 본다. 현재 제어 SW 범위에서는 별도 mop actuator를 만들지 않고 `Cleaner`가 청소/물걸레질 출력을 대표하는 추상 actuator 역할을 한다.
+
+다음 추가 조건을 포함한다.
 
 - 전방 센서는 interrupt 방식으로 동작한다.
 - 좌측 센서, 우측 센서, 먼지 센서는 periodic 방식으로 동작한다.
@@ -20,7 +22,7 @@
 | Dust Sensor | 먼지 감지 상태를 주기적으로 제공하는 센서 |
 | Digital Clock | 제어 tick을 제공하는 주기적 시간 소스 |
 | Motor | 이동, 정지, 회전, 후진 명령을 수행하는 하드웨어 |
-| Cleaner | 일반 청소와 강화 청소 명령을 수행하는 하드웨어 |
+| Cleaner | 일반 청소, 강화 청소, 물걸레질 출력을 대표하는 추상 하드웨어 |
 
 ## 3. Use Cases
 
@@ -51,7 +53,7 @@
 | Primary Actor | Front Sensor |
 | Goal | 전방 장애물을 감지했을 때 충돌 없이 회피한다. |
 | Precondition | RVC가 자동 청소 중이다. |
-| Main Flow | Front Sensor가 interrupt를 발생시킨다. System은 즉시 전진을 멈추고 좌/우 periodic sensor 값을 확인한다. 열린 방향이 있으면 해당 방향으로 회전한 뒤 전진 청소를 재개한다. |
+| Main Flow | Front Sensor가 interrupt를 발생시킨다. System은 즉시 전진 청소를 멈추고 cleaner를 끈 뒤 좌/우 periodic sensor 값을 확인한다. 열린 방향이 있으면 cleaner off 상태로 해당 방향으로 회전한 뒤, 전진 청소를 재개할 때 cleaner를 다시 켠다. |
 | Alternative Flow | 좌/우가 모두 열려 있으면 기본 회전 정책에 따라 좌우를 번갈아 선택한다. |
 | Postcondition | RVC는 장애물을 회피하고 청소를 계속한다. |
 
@@ -62,7 +64,7 @@
 | Primary Actor | Front Sensor, Left Sensor, Right Sensor |
 | Goal | 전방, 좌측, 우측이 모두 막힌 상황에서 탈출한다. |
 | Precondition | RVC가 자동 청소 중이며 삼방향이 모두 막혀 있다. |
-| Main Flow | System은 `Escaping` 상태로 전환한다. 좌측 또는 우측이 열릴 때까지 계속 후진한다. 탈출 가능해지면 열린 방향으로 회전하고 청소를 재개한다. 후진 직후 전방이 열리더라도 좌/우가 모두 막혀 있으면 탈출 가능 상태로 보지 않는다. |
+| Main Flow | System은 cleaner를 끄고 `Escaping` 상태로 전환한다. 좌측 또는 우측이 열릴 때까지 cleaner off 상태로 계속 후진한다. 탈출 가능해지면 cleaner off 상태로 열린 방향으로 회전하고, 전진 청소를 재개할 때 cleaner를 다시 켠다. 후진 직후 전방이 열리더라도 좌/우가 모두 막혀 있으면 탈출 가능 상태로 보지 않는다. |
 | Postcondition | RVC는 탈출 가능 위치로 이동한 뒤 자동 청소를 계속한다. |
 
 ### UC-05 Boost Cleaning On Dust
@@ -104,9 +106,12 @@
 | FR-13 | After escape becomes possible, System shall turn toward an open side. | UC-04 |
 | FR-14 | If dust is detected, System shall set cleaner power to boost for a configured number of ticks. | UC-05 |
 | FR-15 | If boost duration expires and no new dust is detected, System shall return cleaner power to normal. | UC-05 |
-| FR-16 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | UC-06 |
-| FR-17 | Simulator shall log tick, sensor values, command, robot position, direction, and cleaning power. | UC-06 |
-| FR-18 | Simulator shall use the same controller interface as the production control SW. | UC-06 |
+| FR-16 | During avoidance or escape motion (`Backward`, `TurnLeft`, `TurnRight`), System shall command cleaner power `Off`. | UC-03, UC-04 |
+| FR-17 | During forward cleaning (`Forward`), System shall command cleaner power `Normal` or `Boost` according to the active dust boost state. | UC-01, UC-05 |
+| FR-18 | Dust boost state may be maintained internally during avoidance or escape, but actual cleaner output shall remain `Off` until forward cleaning resumes. | UC-03, UC-04, UC-05 |
+| FR-19 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | UC-06 |
+| FR-20 | Simulator shall log tick, sensor values, command, robot position, direction, and cleaning power. | UC-06 |
+| FR-21 | Simulator shall use the same controller interface as the production control SW. | UC-06 |
 
 ## 5. Non-Functional Requirements
 
@@ -128,10 +133,20 @@
 1. 청소가 시작되면 RVC는 기본적으로 cleaner를 켠 상태로 전진한다.
 2. 전방 센서는 interrupt 방식이며, 전방 장애물이 감지되면 즉시 전진을 멈추고 회피 판단으로 진입한다.
 3. 좌측 센서, 우측 센서, 먼지 센서는 periodic 방식이며 제어 tick마다 최신 값을 갱신한다.
-4. 전방 장애물이 있고 좌/우 중 한쪽만 열려 있으면 열린 방향으로 회전한 뒤 전진 청소를 재개한다.
+4. 전방 장애물이 있고 좌/우 중 한쪽만 열려 있으면 cleaner를 끄고 열린 방향으로 회전한 뒤 전진 청소를 재개할 때 cleaner를 다시 켠다.
 5. 전방 장애물이 있고 좌/우가 모두 열려 있으면 기본 회전 정책에 따라 방향을 선택한다. 기본값은 좌우 번갈아 선택이다.
-6. 전방, 좌측, 우측이 모두 막혀 있으면 `Escaping` 상태로 진입한다.
-7. `Escaping` 상태에서는 좌/우 중 한쪽이 열릴 때까지 계속 후진한다.
+6. 전방, 좌측, 우측이 모두 막혀 있으면 cleaner를 끄고 `Escaping` 상태로 진입한다.
+7. `Escaping` 상태에서는 좌/우 중 한쪽이 열릴 때까지 cleaner off 상태로 계속 후진한다.
 8. 탈출 가능 조건은 좌측 또는 우측 중 하나 이상이 열린 상태로 정의한다. 전방은 후진 직후 자연스럽게 열릴 수 있으므로 `Escaping` 상태의 탈출 판단에 사용하지 않는다.
-9. 탈출 가능해지면 열린 방향으로 회전하고 전진 청소를 재개한다.
-10. 먼지가 감지되면 일정 tick 동안 청소 세기를 높이고, 시간이 끝나면 기본 세기로 복귀한다.
+9. 탈출 가능해지면 cleaner off 상태로 열린 방향으로 회전하고 전진 청소를 재개할 때 cleaner를 다시 켠다.
+10. 먼지가 감지되면 일정 tick 동안 청소 세기 상태를 높이고, 시간이 끝나면 기본 세기 상태로 복귀한다.
+11. dust boost 상태가 회피/탈출 중 유지되더라도 실제 cleaner 출력은 `Backward`, `TurnLeft`, `TurnRight` 동안 `Off`가 우선한다.
+
+## 7. Future or Extended Requirements
+
+다음 항목은 `docs/rvc.pdf`의 future requirement로 식별되지만, 현재 버전의 기능 요구사항에는 포함하지 않는다.
+
+- 센서가 추가되거나 기존 센서가 변경될 수 있다.
+- RVC가 한 지점을 일정 시간 순환 청소할 수 있다.
+- RVC가 모바일 앱과 통신할 수 있다.
+- RVC가 더 효율적인 청소를 위해 machine learning과 inference를 사용할 수 있다.
