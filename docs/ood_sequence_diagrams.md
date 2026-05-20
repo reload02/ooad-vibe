@@ -6,18 +6,15 @@
 sequenceDiagram
     participant Simulator
     participant Controller as RvcController
-    participant Sampler as PeriodicSensorSampler
-    participant Motor
-    participant Cleaner
 
-    Simulator->>Sampler: samplePeriodicSensors()
-    Sampler-->>Simulator: PeriodicSensorData
+    Simulator->>Simulator: samplePeriodicSensors()
     Simulator->>Controller: tick(periodicSensors)
     Controller->>Controller: readPeriodicSensors(periodicSensors)
     Controller->>Controller: decideNextCommand(snapshot)
     Controller-->>Simulator: Command
-    Simulator->>Motor: apply(command.motion)
-    Simulator->>Cleaner: apply(command.cleaningPower)
+    Simulator->>Simulator: cleanCurrentCell(command)
+    Simulator->>Simulator: applyMotion(command.motion)
+    Simulator->>Simulator: makeLogLine(...)
 ```
 
 ## 2. SD-02 Front Interrupt Handling
@@ -25,13 +22,13 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Simulator
-    participant FrontSensor
     participant Controller as RvcController
 
-    Simulator->>FrontSensor: detectFrontCell()
+    Simulator->>Simulator: isObstacle(forwardPosition())
     alt front obstacle exists
-        FrontSensor->>Controller: onFrontObstacleInterrupt()
+        Simulator->>Controller: onFrontObstacleInterrupt()
     end
+    Simulator->>Simulator: samplePeriodicSensors()
     Simulator->>Controller: tick(periodicSensors)
     Controller->>Controller: include pending front interrupt in SensorSnapshot
     Controller-->>Simulator: avoid command
@@ -42,19 +39,11 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Simulator
-    participant LeftSensor
-    participant RightSensor
-    participant DustSensor
-    participant Sampler as PeriodicSensorSampler
 
-    Simulator->>Sampler: sample()
-    Sampler->>LeftSensor: read()
-    LeftSensor-->>Sampler: leftObstacle
-    Sampler->>RightSensor: read()
-    RightSensor-->>Sampler: rightObstacle
-    Sampler->>DustSensor: read()
-    DustSensor-->>Sampler: dustDetected
-    Sampler-->>Simulator: PeriodicSensorData
+    Simulator->>Simulator: isObstacle(adjacent(left))
+    Simulator->>Simulator: isObstacle(adjacent(right))
+    Simulator->>Simulator: hasDust(robotPosition)
+    Simulator-->>Simulator: PeriodicSensorData
 ```
 
 ## 4. SD-04 Obstacle Avoidance

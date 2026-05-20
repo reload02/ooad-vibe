@@ -2,6 +2,8 @@
 
 ## 1. Domain Model
 
+이 다이어그램의 `Motor`, `Cleaner`, sensor 항목은 문제 영역의 도메인 개념이며 C++ 구현 클래스를 의미하지 않는다. 현재 구현에서는 `RvcController`가 `Command`를 생성하고 `GridSimulator`가 이를 검증 환경에 적용한다.
+
 ```mermaid
 classDiagram
     class RVC {

@@ -77,19 +77,17 @@
 | Main Flow | Dust Sensor가 periodic sampling에서 먼지를 감지한다. System은 cleaner를 boost power로 설정한다. 설정된 tick 동안 boost를 유지한 뒤 normal power로 복귀한다. |
 | Postcondition | 먼지 구간에서 강화 청소가 수행된다. |
 
-### UC-06 Run Simulator Scenario
+## 4. Verification Support
 
-| Item | Description |
-| --- | --- |
-| Primary Actor | Tester |
-| Goal | CLI 시뮬레이터로 제어 SW의 자동 청소 동작을 검증한다. |
-| Precondition | 시뮬레이터 맵 또는 기본 맵이 준비되어 있다. |
-| Main Flow | Tester가 시뮬레이터를 실행한다. Simulator는 tick마다 sensor/event, command, robot position, direction, cleaning power를 출력한다. |
-| Postcondition | 시스템 테스트 로그로 주요 제어 흐름을 검증할 수 있다. |
+시뮬레이터는 RVC의 사용자 또는 센서 중심 유스케이스가 아니라 제어 소프트웨어 구현을 검증하기 위한 지원 기능으로 분리한다.
 
-## 4. Functional Requirements
+| ID | Item | Description |
+| --- | --- | --- |
+| VS-01 | CLI simulator scenario execution | 기본 맵 또는 시나리오 맵으로 controller 동작을 실행하고 tick별 sensor/event, command, robot position, direction, cleaning power 로그를 제공한다. |
 
-| ID | Requirement | Related Use Case |
+## 5. Functional Requirements
+
+| ID | Requirement | Related Context |
 | --- | --- | --- |
 | FR-01 | System shall start automatic cleaning when requested. | UC-01 |
 | FR-02 | System shall stop motor and cleaner when cleaning is stopped. | UC-02 |
@@ -106,14 +104,11 @@
 | FR-13 | After escape becomes possible, System shall turn toward an open side. | UC-04 |
 | FR-14 | If dust is detected, System shall set cleaner power to boost for a configured number of ticks. | UC-05 |
 | FR-15 | If boost duration expires and no new dust is detected, System shall return cleaner power to normal. | UC-05 |
-| FR-16 | During avoidance or escape motion (`Backward`, `TurnLeft`, `TurnRight`), System shall command cleaner power `Off`. | UC-03, UC-04 |
-| FR-17 | During forward cleaning (`Forward`), System shall command cleaner power `Normal` or `Boost` according to the active dust boost state. | UC-01, UC-05 |
-| FR-18 | Dust boost state may be maintained internally during avoidance or escape, but actual cleaner output shall remain `Off` until forward cleaning resumes. | UC-03, UC-04, UC-05 |
-| FR-19 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | UC-06 |
-| FR-20 | Simulator shall log tick, sensor values, command, robot position, direction, and cleaning power. | UC-06 |
-| FR-21 | Simulator shall use the same controller interface as the production control SW. | UC-06 |
+| FR-16 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | VS-01 |
+| FR-17 | Simulator shall log tick, sensor values, command, robot position, direction, and cleaning power. | VS-01 |
+| FR-18 | Simulator shall use the same controller interface as the production control SW. | VS-01 |
 
-## 5. Non-Functional Requirements
+## 6. Non-Functional Requirements
 
 | ID | Requirement |
 | --- | --- |
@@ -128,7 +123,7 @@
 | NFR-09 | Source files and documents shall be encoded in UTF-8. |
 | NFR-10 | The design shall follow SOLID principles where applicable. |
 
-## 6. Core Control Rules
+## 7. Core Control Rules
 
 1. 청소가 시작되면 RVC는 기본적으로 cleaner를 켠 상태로 전진한다.
 2. 전방 센서는 interrupt 방식이며, 전방 장애물이 감지되면 즉시 전진을 멈추고 회피 판단으로 진입한다.
