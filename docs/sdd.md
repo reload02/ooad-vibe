@@ -252,7 +252,7 @@ stateDiagram-v2
 
 | 테스트 수준 | 대상 | 검증 내용 |
 | --- | --- | --- |
-| Controller unit test | `RvcController` | 전진, interrupt 회피, 좌/우 회전 선택, 교대 회전, 탈출, dust boost duration |
+| Controller unit test | `RvcController` | 전진, 중지, interrupt 회피, 좌/우 회전 선택, 교대 회전, 탈출, dust boost duration |
 | Simulator system test | `GridSimulator` | 실제 격자에서 dust 청소, 후진 탈출, boxed-in 반복 후진, front interrupt 후 회전 |
 | CLI CTest | `rvc_simulator` | 기본 실행과 scenario 기반 실행 가능 여부 |
 
@@ -261,7 +261,7 @@ stateDiagram-v2
 | 요구사항 | 핵심 설계 요소 | 검증 |
 | --- | --- | --- |
 | FR-01 | `RvcController::startCleaning`, `ControllerState::Cleaning` | `ControllerMovesForwardWhenPathIsClear` |
-| FR-02 | `RvcController::stopCleaning`, idle command | controller API와 SRS 기준 수동 확인 |
+| FR-02 | `RvcController::stopCleaning`, idle command | `StopCleaningReturnsStopAndOff` |
 | FR-03 | `decideNextCommand`, `Motion::Forward` | `ControllerMovesForwardWhenPathIsClear` |
 | FR-04 | `onFrontObstacleInterrupt`, `frontInterruptPending_` | `FrontInterruptTriggersImmediateAvoidance`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-05 | `tick`, `SensorSnapshot::frontObstacle`, 회피 command | `FrontInterruptTriggersImmediateAvoidance`, `SimulatorTurnsAfterFrontInterrupt` |

@@ -2,10 +2,10 @@
 
 ## 1. Requirement to Design Traceability
 
-| Requirement | Use Case | OOA SSD | OOD SD | Class |
+| Requirement | Use Case / Verification Item | OOA SSD | OOD SD | Class |
 | --- | --- | --- | --- | --- |
 | FR-01 | UC-01 | SSD-01 | SD-01 | `RvcController` |
-| FR-02 | UC-02 | SSD-01 | SD-01 | `RvcController` |
+| FR-02 | UC-02 | SSD-06 | SD-01 | `RvcController` |
 | FR-03 | UC-01 | SSD-01 | SD-01, SD-04 | `RvcController`, `Command` |
 | FR-04 | UC-03 | SSD-02 | SD-02 | `RvcController` |
 | FR-05 | UC-03 | SSD-02 | SD-02, SD-04 | `RvcController`, `Command` |
@@ -19,19 +19,20 @@
 | FR-13 | UC-04 | SSD-05 | SD-05 | `RvcController` |
 | FR-14 | UC-05 | SSD-04 | SD-06 | `RvcController` |
 | FR-15 | UC-05 | SSD-04 | SD-06 | `RvcController` |
-| FR-16 | UC-06 | SSD-03 | SD-01 | `GridSimulator` |
-| FR-17 | UC-06 | SSD-03 | SD-01 | `GridSimulator`, `SimulationResult` |
-| FR-18 | UC-06 | SSD-01 to SSD-05 | SD-01 | `RvcController`, `GridSimulator` |
+| FR-16 | VS-01 | SSD-03 | SD-01 | `GridSimulator` |
+| FR-17 | VS-01 | SSD-03 | SD-01 | `GridSimulator`, `SimulationResult` |
+| FR-18 | VS-01 | SSD-01 to SSD-05 | SD-01 | `RvcController`, `GridSimulator` |
 
 ## 2. Requirement to Test Traceability
 
 | Requirement | Test Case |
 | --- | --- |
 | FR-01, FR-03 | `ControllerMovesForwardWhenPathIsClear` |
-| FR-04, FR-05 | `FrontInterruptTriggersImmediateAvoidance` |
-| FR-07, FR-08 | `TurnsTowardOpenSide` |
+| FR-02 | `StopCleaningReturnsStopAndOff` |
+| FR-04, FR-05 | `FrontInterruptTriggersImmediateAvoidance`, `SimulatorTurnsAfterFrontInterrupt` |
+| FR-07, FR-08 | `FrontInterruptTriggersImmediateAvoidance`, `TurnsTowardOpenSide`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-09 | `AlternatesWhenBothSidesAreOpen` |
 | FR-10, FR-11 | `AllBlockedEntersEscapingAndKeepsBackingUp` |
 | FR-12, FR-13 | `EscapingExitsWhenFrontBecomesOpen` |
 | FR-14, FR-15 | `DustBoostLastsConfiguredTicks` |
-| FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape` |
+| FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |

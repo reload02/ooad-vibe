@@ -9,40 +9,61 @@
 ```mermaid
 sequenceDiagram
     actor User
+    actor Clock as Digital Clock
     participant System as RVC Control SW
     actor Motor
     actor Cleaner
 
     User->>System: startCleaning()
-    System->>Cleaner: setPower(Normal)
-    System->>Motor: moveForward()
+    System->>System: state = Cleaning, running = true
     System-->>User: cleaningStarted
+    Clock->>System: tick(periodicSensors)
+    System-->>Motor: Command(Forward)
+    System-->>Cleaner: Command(Normal)
 ```
 
-## 3. SSD-02 Front Obstacle Interrupt
+## 3. SSD-06 Stop Automatic Cleaning
+
+```mermaid
+sequenceDiagram
+    actor User
+    actor Clock as Digital Clock
+    participant System as RVC Control SW
+    actor Motor
+    actor Cleaner
+
+    User->>System: stopCleaning()
+    System->>System: state = Idle, running = false, boostTicksRemaining = 0
+    System-->>User: cleaningStopped
+    Clock->>System: tick(periodicSensors)
+    System-->>Motor: Command(Stop)
+    System-->>Cleaner: Command(Off)
+```
+
+## 4. SSD-02 Front Obstacle Interrupt
 
 ```mermaid
 sequenceDiagram
     actor FrontSensor as Front Sensor
+    actor Clock as Digital Clock
     participant System as RVC Control SW
     actor LeftSensor as Left Sensor
     actor RightSensor as Right Sensor
     actor Motor
 
     FrontSensor->>System: onFrontObstacleInterrupt()
-    System->>Motor: stop()
-    System->>LeftSensor: readLeftObstacle()
+    System->>System: mark front interrupt pending
+    Clock->>System: tick(periodicSensors)
     LeftSensor-->>System: leftObstacle
-    System->>RightSensor: readRightObstacle()
     RightSensor-->>System: rightObstacle
     alt one side is open
-        System->>Motor: turn(openDirection)
+        System-->>Motor: Command(TurnLeft or TurnRight)
     else both sides are blocked
-        System->>Motor: moveBackward()
+        System-->>Motor: Command(Backward)
     end
 ```
 
-## 4. SSD-03 Periodic Sensor Sampling
+## 5. SSD-03 Periodic Sensor Sampling
 
 ```mermaid
 sequenceDiagram
@@ -53,16 +74,13 @@ sequenceDiagram
     actor DustSensor as Dust Sensor
 
     Clock->>System: tick()
-    System->>LeftSensor: readLeftObstacle()
     LeftSensor-->>System: leftObstacle
-    System->>RightSensor: readRightObstacle()
     RightSensor-->>System: rightObstacle
-    System->>DustSensor: readDustDetected()
     DustSensor-->>System: dustDetected
     System->>System: updatePeriodicSensorSnapshot()
 ```
 
-## 5. SSD-04 Boost Cleaning On Dust
+## 6. SSD-04 Boost Cleaning On Dust
 
 ```mermaid
 sequenceDiagram
@@ -72,18 +90,17 @@ sequenceDiagram
     actor Cleaner
 
     Clock->>System: tick()
-    System->>DustSensor: readDustDetected()
     DustSensor-->>System: dustDetected = true
     System->>System: startBoostTimer()
-    System->>Cleaner: setPower(Boost)
+    System-->>Cleaner: Command(Boost)
     loop until boost timer expires
         Clock->>System: tick()
-        System->>Cleaner: keepPower(Boost)
+        System-->>Cleaner: Command(Boost)
     end
-    System->>Cleaner: setPower(Normal)
+    System-->>Cleaner: Command(Normal)
 ```
 
-## 6. SSD-05 Escape From Blocked Area
+## 7. SSD-05 Escape From Blocked Area
 
 ```mermaid
 sequenceDiagram
@@ -96,30 +113,26 @@ sequenceDiagram
 
     FrontSensor->>System: onFrontObstacleInterrupt()
     Clock->>System: tick()
-    System->>LeftSensor: readLeftObstacle()
     LeftSensor-->>System: leftObstacle = true
-    System->>RightSensor: readRightObstacle()
     RightSensor-->>System: rightObstacle = true
     System->>System: enterEscaping()
     loop while front, left, and right are blocked
-        System->>Motor: moveBackward()
+        System-->>Motor: Command(Backward)
         Clock->>System: tick()
         opt front is still blocked
             FrontSensor->>System: onFrontObstacleInterrupt()
         end
-        System->>LeftSensor: readLeftObstacle()
         LeftSensor-->>System: leftObstacle
-        System->>RightSensor: readRightObstacle()
         RightSensor-->>System: rightObstacle
     end
     alt front is open
-        System->>Motor: moveForward()
+        System-->>Motor: Command(Forward)
     else side is open
-        System->>Motor: turn(openDirection)
+        System-->>Motor: Command(TurnLeft or TurnRight)
     end
 ```
 
-## 7. System Interface
+## 8. System Interface
 
 | Operation | Input | Output | Responsibility |
 | --- | --- | --- | --- |
@@ -130,12 +143,12 @@ sequenceDiagram
 | `readPeriodicSensors(periodicSensors)` | `PeriodicSensorData` | `SensorSnapshot` | 좌측, 우측, 먼지 periodic 값과 pending front interrupt를 하나의 snapshot으로 결합한다. |
 | `decideNextCommand(snapshot)` | `SensorSnapshot` | `Command` | 핵심 제어 규칙에 따라 다음 동작 명령을 계산한다. |
 
-## 8. System Operations
+## 9. System Operations
 
 | Operation | Related FR | Notes |
 | --- | --- | --- |
-| `startCleaning()` | FR-01, FR-03 | 기본 전진 청소 흐름을 시작한다. |
-| `stopCleaning()` | FR-02 | cleaner off와 motor stop을 의미한다. |
+| `startCleaning()` | FR-01, FR-03 | 실행 상태를 시작하며 실제 전진/청소 명령은 다음 `tick()`에서 생성된다. |
+| `stopCleaning()` | FR-02 | 실행 상태와 boost timer를 초기화하며 다음 `tick()`에서 `Stop`/`Off` command가 생성된다. |
 | `onFrontObstacleInterrupt()` | FR-04, FR-05 | interrupt는 다음 `tick()`보다 먼저 들어올 수 있다. |
 | `tick(periodicSensors)` | FR-06 | Digital Clock의 제어 주기마다 호출된다. |
 | `decideNextCommand(snapshot)` | FR-07 to FR-15 | 회피, 탈출, boost 규칙을 포함한다. |

@@ -23,6 +23,29 @@ TEST(RvcControllerTest, ControllerMovesForwardWhenPathIsClear) {
     EXPECT_EQ(controller.state(), ControllerState::Cleaning);
 }
 
+TEST(RvcControllerTest, StopCleaningReturnsStopAndOff) {
+    RvcController controller;
+    controller.startCleaning();
+    (void)controller.tick(PeriodicSensorData{
+        .leftObstacle = false,
+        .rightObstacle = false,
+        .dustDetected = true,
+    });
+
+    controller.stopCleaning();
+    const Command command = controller.tick(PeriodicSensorData{
+        .leftObstacle = false,
+        .rightObstacle = false,
+        .dustDetected = true,
+    });
+
+    EXPECT_EQ(command.motion, Motion::Stop);
+    EXPECT_EQ(command.cleaningPower, CleaningPower::Off);
+    EXPECT_EQ(controller.state(), ControllerState::Idle);
+    EXPECT_FALSE(controller.isRunning());
+    EXPECT_EQ(controller.boostTicksRemaining(), 0);
+}
+
 TEST(RvcControllerTest, FrontInterruptTriggersImmediateAvoidance) {
     RvcController controller;
     controller.startCleaning();

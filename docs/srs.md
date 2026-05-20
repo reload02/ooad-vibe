@@ -276,19 +276,9 @@ map:
 | 기본 흐름 | 먼지 센서가 먼지를 감지하면 시스템은 cleaner를 `Boost`로 설정하고 설정된 tick 동안 유지한다. |
 | 사후 조건 | boost 시간이 만료되고 새 먼지가 감지되지 않으면 cleaner는 `Normal`로 복귀한다. |
 
-### UC-06 시뮬레이터 시나리오 실행
-
-| 항목 | 내용 |
-| --- | --- |
-| 주요 주체 | Tester |
-| 목표 | CLI 시뮬레이터로 제어 소프트웨어의 주요 동작을 검증한다. |
-| 사전 조건 | 기본 지도 또는 시나리오 파일이 준비되어 있다. |
-| 기본 흐름 | Tester가 시뮬레이터를 실행하면 시스템은 tick마다 센서, 명령, 위치, 방향, 청소 세기를 로그로 출력한다. |
-| 사후 조건 | Tester는 로그와 summary를 통해 요구사항 충족 여부를 검토할 수 있다. |
-
 ## 9. 기능 요구사항
 
-| ID | 요구사항 | 수용 기준 | 관련 유스케이스 |
+| ID | 요구사항 | 수용 기준 | 관련 항목 |
 | --- | --- | --- | --- |
 | FR-01 | System shall start automatic cleaning when requested. | `startCleaning()` 호출 후 컨트롤러는 실행 중 상태가 되고 다음 tick에서 청소 명령을 생성한다. | UC-01 |
 | FR-02 | System shall stop motor and cleaner when cleaning is stopped. | `stopCleaning()` 호출 후 tick 결과는 `motion=Stop`, `cleaningPower=Off`가 된다. | UC-02 |
@@ -305,9 +295,9 @@ map:
 | FR-13 | After escape becomes possible, System shall turn toward an open side or move forward if front is open. | 전방이 열리면 `Forward`, 전방은 막히고 한쪽 측면이 열리면 열린 방향 회전 명령을 반환한다. | UC-04 |
 | FR-14 | If dust is detected, System shall set cleaner power to boost for a configured number of ticks. | `dustDetected=true`인 tick에서 `cleaningPower=Boost`가 되고 `dustBoostTicks` 동안 유지된다. | UC-05 |
 | FR-15 | If boost duration expires and no new dust is detected, System shall return cleaner power to normal. | 먼지가 새로 감지되지 않고 boost 잔여 tick이 끝나면 `cleaningPower=Normal`로 복귀한다. | UC-05 |
-| FR-16 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | 지도 출력은 로봇 방향 문자, `#`, `.`, `*`를 사용해 현재 상태를 표현한다. | UC-06 |
-| FR-17 | Simulator shall log tick, sensor values, command, robot position, direction, and cleaning power. | 각 tick 로그는 센서 상태, motion, cleaner, position, direction, cleaned, reason을 포함한다. | UC-06 |
-| FR-18 | Simulator shall use the same controller interface as the production control SW. | 시뮬레이터는 `RvcController`에 interrupt와 periodic 데이터를 전달하고 반환된 `Command`를 적용한다. | UC-06 |
+| FR-16 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | 지도 출력은 로봇 방향 문자, `#`, `.`, `*`를 사용해 현재 상태를 표현한다. | VS-01 |
+| FR-17 | Simulator shall log tick, sensor values, command, robot position, direction, and cleaning power. | 각 tick 로그는 센서 상태, motion, cleaner, position, direction, cleaned, reason을 포함한다. | VS-01 |
+| FR-18 | Simulator shall use the same controller interface as the production control SW. | 시뮬레이터는 `RvcController`에 interrupt와 periodic 데이터를 전달하고 반환된 `Command`를 적용한다. | VS-01 |
 
 ## 10. 비기능 요구사항
 
@@ -380,6 +370,7 @@ ctest --test-dir build -C Debug --output-on-failure
 | 테스트 | 검증 요구사항 |
 | --- | --- |
 | `ControllerMovesForwardWhenPathIsClear` | FR-01, FR-03 |
+| `StopCleaningReturnsStopAndOff` | FR-02 |
 | `FrontInterruptTriggersImmediateAvoidance` | FR-04, FR-05 |
 | `TurnsTowardOpenSide` | FR-07, FR-08 |
 | `AlternatesWhenBothSidesAreOpen` | FR-09 |
@@ -406,11 +397,19 @@ ctest --test-dir build -C Debug --output-on-failure
 - `--quiet-map` 옵션을 사용하면 지도 frame 출력 없이 로그와 summary 중심으로 확인할 수 있어야 한다.
 - 문서의 요구사항 ID와 테스트 추적성이 `docs/traceability.md`와 모순되지 않아야 한다.
 
+### 12.5 시뮬레이터 검증 지원 항목
+
+시뮬레이터 시나리오 실행은 RVC 제어 행위가 아니므로 유스케이스 번호를 부여하지 않는다. 관련 구현 요구사항은 FR-16~FR-18, CLI 인터페이스는 7.5~7.7, 검증 기준은 이 절에서 관리한다.
+
+| ID | 목적 | 관련 요구사항 |
+| --- | --- | --- |
+| VS-01 | CLI 그리드 시뮬레이터로 컨트롤러 구현을 실행하고 지도 렌더링, tick 로그, production controller interface 사용 여부를 검증한다. | FR-16, FR-17, FR-18 |
+
 ## 13. 요구사항 추적성
 
 ### 13.1 요구사항과 설계 요소
 
-| 요구사항 | 유스케이스 | 주요 설계/구현 요소 |
+| 요구사항 | 유스케이스/검증 항목 | 주요 설계/구현 요소 |
 | --- | --- | --- |
 | FR-01 | UC-01 | `RvcController::startCleaning`, `ControllerState::Cleaning` |
 | FR-02 | UC-02 | `RvcController::stopCleaning`, `Motion::Stop`, `CleaningPower::Off` |
@@ -427,22 +426,23 @@ ctest --test-dir build -C Debug --output-on-failure
 | FR-13 | UC-04 | `RvcController::decideNextCommand`, 탈출 후 명령 결정 |
 | FR-14 | UC-05 | `RvcController::updateCleaningPower`, `ControllerConfig::dustBoostTicks` |
 | FR-15 | UC-05 | `boostTicksRemaining_`, `CleaningPower::Normal` |
-| FR-16 | UC-06 | `GridSimulator::render`, scenario map symbols |
-| FR-17 | UC-06 | `GridSimulator::makeLogLine`, `SimulationResult::logs` |
-| FR-18 | UC-06 | `GridSimulator`, `RvcController`, `Command` |
+| FR-16 | VS-01 | `GridSimulator::render`, scenario map symbols |
+| FR-17 | VS-01 | `GridSimulator::makeLogLine`, `SimulationResult::logs` |
+| FR-18 | VS-01 | `GridSimulator`, `RvcController`, `Command` |
 
 ### 13.2 요구사항과 테스트
 
 | 요구사항 | 테스트 |
 | --- | --- |
 | FR-01, FR-03 | `ControllerMovesForwardWhenPathIsClear` |
+| FR-02 | `StopCleaningReturnsStopAndOff` |
 | FR-04, FR-05 | `FrontInterruptTriggersImmediateAvoidance`, `SimulatorTurnsAfterFrontInterrupt` |
-| FR-07, FR-08 | `TurnsTowardOpenSide`, `SimulatorTurnsAfterFrontInterrupt` |
+| FR-07, FR-08 | `FrontInterruptTriggersImmediateAvoidance`, `TurnsTowardOpenSide`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-09 | `AlternatesWhenBothSidesAreOpen` |
 | FR-10, FR-11 | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsCommandingBackwardWhenBoxedIn` |
 | FR-12, FR-13 | `EscapingExitsWhenFrontBecomesOpen` |
 | FR-14, FR-15 | `DustBoostLastsConfiguredTicks`, `SimulatorCleansDustAndLogsCommands` |
-| FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
+| FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
 
 ## 14. 변경 영향
 

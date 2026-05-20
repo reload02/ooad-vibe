@@ -48,9 +48,17 @@ classDiagram
         -Direction direction
         -RvcController controller
         +fromLines(lines) GridSimulator
-        +run(maxTicks) SimulationResult
-        +step(tick) bool
+        +loadScenario(path) Scenario
+        +defaultMap() vector~string~
+        +run(maxTicks, includeFrames) SimulationResult
+        +step(tick, includeFrame) bool
         +render() string
+        +remainingDust() int
+    }
+
+    class Scenario {
+        +vector~string~ mapLines
+        +int ticks
     }
 
     class SimulationResult {
@@ -76,6 +84,7 @@ classDiagram
     RvcController --> SensorSnapshot
     RvcController --> Command
     GridSimulator *-- RvcController
+    GridSimulator --> Scenario
     GridSimulator --> SimulationResult
     GridSimulator --> Position
 ```
@@ -90,6 +99,7 @@ classDiagram
 | `SensorSnapshot` | pending front interrupt와 periodic sensor 값을 결합한 판단 입력이다. |
 | `Command` | motor motion과 cleaner power를 함께 표현하는 추상 actuator 명령이다. |
 | `GridSimulator` | 격자 환경에서 sensor/event를 만들고 controller command를 적용한다. |
+| `Scenario` | 시나리오 파일에서 읽은 지도와 기본 tick 수를 담는다. |
 | `SimulationResult` | 시스템 테스트와 CLI 출력에 필요한 실행 결과를 담는다. |
 
 ## 3. SOLID Analysis
