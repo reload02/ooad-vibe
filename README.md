@@ -9,6 +9,7 @@
 - `docs/ooa_domain_diagram.md`: OOA Domain Diagram
 - `docs/ood_sequence_diagrams.md`: OOD Sequence Diagrams
 - `docs/ood_class_diagram.md`: OOD Class Diagram과 SOLID 분석
+- `docs/sdd.md`: Software Design Description
 - `docs/traceability.md`: 요구사항, 설계, 테스트 추적성
 
 ## Build
