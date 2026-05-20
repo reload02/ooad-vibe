@@ -571,7 +571,3 @@ stateDiagram-v2
 | 하드웨어 독립성 | controller가 concrete hardware에 의존하지 않고 sensor data와 command value만 다룬다. |
 | 반복 가능한 테스트 | controller 입력을 값 객체로 제공하고 random 또는 wall-clock 의존성을 두지 않는다. |
 | 요구사항 추적성 | FR별 설계 요소와 테스트 이름을 SRS, SDD, traceability 문서에 유지한다. |
-
-### 8.4 Change Impact
-
-본 SDD 재구성은 문서 구조 변경 작업이며 C++ 공개 API, 구현 코드, 테스트 코드, 빌드 설정을 변경하지 않는다. 따라서 런타임 동작 변경, 호환성 변경, 마이그레이션 작업은 발생하지 않는다.

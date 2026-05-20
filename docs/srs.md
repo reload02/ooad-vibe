@@ -712,7 +712,3 @@ ctest --test-dir build -C Debug --output-on-failure
 | FR-12, FR-13 | `EscapingExitsWhenFrontBecomesOpen` |
 | FR-14, FR-15 | `DustBoostLastsConfiguredTicks`, `SimulatorCleansDustAndLogsCommands` |
 | FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
-
-## Appendix D. Change Impact
-
-본 SRS 재구성은 문서 구조 변경 작업이며 C++ 공개 API, 구현 코드, 테스트 코드, 빌드 설정을 변경하지 않는다. 따라서 런타임 동작 변경, 호환성 변경, 마이그레이션 작업은 발생하지 않는다.
