@@ -47,9 +47,11 @@ if(BUILD_TESTING)
     add_executable(rvc_tests
         tests/controller_tests.cpp
         tests/system_tests.cpp
+        tests/types_tests.cpp
     )
 
     target_link_libraries(rvc_tests PRIVATE rvc_core GTest::gtest_main)
+    target_compile_definitions(rvc_tests PRIVATE RVC_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
     include(GoogleTest)
     gtest_discover_tests(rvc_tests)

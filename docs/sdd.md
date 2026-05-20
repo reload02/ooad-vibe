@@ -449,8 +449,7 @@ stateDiagram-v2
     Cleaning --> Escaping: front, left, right blocked
     Avoiding --> Cleaning: next tick front open
     Avoiding --> Escaping: all directions blocked
-    Escaping --> Escaping: all directions blocked
-    Escaping --> Cleaning: front opened
+    Escaping --> Escaping: side directions blocked
     Escaping --> Avoiding: side opened
 ```
 
@@ -486,11 +485,11 @@ stateDiagram-v2
 
 #### 7.6.3 Escape Rule
 
-`Escaping` 상태에서는 전방, 좌측, 우측이 모두 막힌 동안 계속 `Backward` command를 반환한다. 세 방향 중 하나 이상이 열리면 탈출 가능 상태로 판단한다. 전방이 열렸으면 `Cleaning`으로 복귀하며 `Forward`를 반환하고, 전방은 막혔지만 한쪽 측면이 열렸으면 `Avoiding`으로 전환해 열린 방향으로 회전한다.
+`Escaping` 상태에서는 좌측과 우측이 모두 막힌 동안 계속 `Backward` command를 반환한다. 좌측 또는 우측 중 하나 이상이 열리면 탈출 가능 상태로 판단한다. 탈출 가능 상태가 되면 `Avoiding`으로 전환해 열린 측면 방향으로 회전한다.
 
 #### 7.6.4 Dust Boost Rule
 
-`updateCleaningPower(bool dustDetected)`는 motion 판단과 독립적으로 cleaner power를 결정한다. 먼지가 감지되면 `boostTicksRemaining_`을 `config_.dustBoostTicks`로 재설정한다. 먼지가 감지되지 않고 남은 boost tick이 있으면 1 감소시킨다. 남은 boost tick이 0보다 크면 `Boost`, 아니면 `Normal`을 반환한다.
+`updateCleaningPower(bool dustDetected)`는 motion 판단과 독립적으로 cleaner power 후보를 결정한다. 먼지가 감지되면 `boostTicksRemaining_`을 `config_.dustBoostTicks`로 재설정한다. 먼지가 감지되지 않고 남은 boost tick이 있으면 1 감소시킨다. 남은 boost tick이 0보다 크면 `Boost`, 아니면 `Normal`을 반환한다. 최종 `Command` 생성 시에는 `Forward` 동작에서만 해당 power를 출력하고, 회피 회전, 후진, 정지 동작에서는 cleaner power를 `Off`로 내보낸다.
 
 ### 7.7 Error Handling View
 
@@ -512,8 +511,8 @@ stateDiagram-v2
 
 | 테스트 수준 | 대상 | 검증 내용 |
 | --- | --- | --- |
-| Controller unit test | `RvcController` | 전진, 중지, interrupt 회피, 좌/우 회전 선택, 교대 회전, 탈출, dust boost duration |
-| Simulator system test | `GridSimulator` | 실제 격자에서 dust 청소, 후진 탈출, boxed-in 반복 후진, front interrupt 후 회전 |
+| Controller unit test | `RvcController` | 전진, 중지, interrupt 회피, 좌/우 회전 선택, 교대 회전, 탈출 유지와 측면 탈출, dust boost duration, 회피 중 cleaner off |
+| Simulator system test | `GridSimulator` | 실제 격자에서 dust 청소, 후진 탈출, boxed-in 반복 후진, 측면 탈출구 확인, boost 중 cleaner off, front interrupt 후 회전 |
 | CLI CTest | `rvc_simulator` | 기본 실행과 scenario 기반 실행 가능 여부 |
 
 #### 7.8.2 Requirement Traceability
@@ -529,12 +528,12 @@ stateDiagram-v2
 | FR-07 | `chooseOpenSideTurn`, `Motion::TurnLeft` | `FrontInterruptTriggersImmediateAvoidance` |
 | FR-08 | `chooseOpenSideTurn`, `Motion::TurnRight` | `TurnsTowardOpenSide`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-09 | `preferLeftTurn_`, 좌우 교대 정책 | `AlternatesWhenBothSidesAreOpen` |
-| FR-10 | all-blocked 판단, `ControllerState::Escaping` | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorUsesBackwardEscape` |
-| FR-11 | `Escaping` 상태의 `Motion::Backward` 반복 | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorKeepsCommandingBackwardWhenBoxedIn` |
-| FR-12 | 탈출 가능 조건 판단 | `EscapingExitsWhenFrontBecomesOpen` |
-| FR-13 | 탈출 후 `Forward` 또는 측면 회전 | `EscapingExitsWhenFrontBecomesOpen` |
-| FR-14 | `updateCleaningPower`, `ControllerConfig::dustBoostTicks` | `DustBoostLastsConfiguredTicks`, `SimulatorCleansDustAndLogsCommands` |
-| FR-15 | `boostTicksRemaining_` 감소와 `CleaningPower::Normal` 복귀 | `DustBoostLastsConfiguredTicks` |
+| FR-10 | all-blocked 판단, `ControllerState::Escaping` | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
+| FR-11 | `Escaping` 상태의 `Motion::Backward` 반복 | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorKeepsCommandingBackwardWhenBoxedIn`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
+| FR-12 | 측면 탈출 가능 조건 판단 | `EscapingIgnoresOpenFrontUntilSideOpens`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
+| FR-13 | 탈출 후 측면 회전 | `EscapingIgnoresOpenFrontUntilSideOpens`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
+| FR-14 | `updateCleaningPower`, `ControllerConfig::dustBoostTicks` | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained`, `SimulatorCleansDustAndLogsCommands`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
+| FR-15 | `boostTicksRemaining_` 감소와 `CleaningPower::Normal` 복귀 | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained` |
 | FR-16 | `GridSimulator::render`, scenario map symbol | `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
 | FR-17 | `GridSimulator::makeLogLine`, `SimulationResult::logs` | `SimulatorCleansDustAndLogsCommands`, CLI CTest |
 | FR-18 | `GridSimulator`가 `RvcController`와 `Command`를 사용 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape` |

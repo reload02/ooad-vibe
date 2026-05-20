@@ -32,18 +32,19 @@
 | FR-04, FR-05 | `FrontInterruptTriggersImmediateAvoidance`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-07, FR-08 | `FrontInterruptTriggersImmediateAvoidance`, `TurnsTowardOpenSide`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-09 | `AlternatesWhenBothSidesAreOpen` |
-| FR-10, FR-11 | `AllBlockedEntersEscapingAndKeepsBackingUp` |
+| FR-10, FR-11 | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsCommandingBackwardWhenBoxedIn` |
 | FR-12, FR-13 | `EscapingIgnoresOpenFrontUntilSideOpens`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
-| FR-14, FR-15 | `DustBoostLastsConfiguredTicks` |
-| FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
+| FR-14, FR-15 | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained`, `SimulatorCleansDustAndLogsCommands`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
+| FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsBackingUpUntilSideExitOpens`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
 
 ## 3. 최신 테스트 실행 결과
 
 | 항목 | 결과 |
 | --- | --- |
 | 실행일 | 2026-05-20 |
+| 빌드 갱신 명령 | `cmake --build build --config Debug` |
 | 실행 명령 | `ctest --test-dir build -C Debug --output-on-failure` |
-| 유닛 테스트 | 8 passed / 0 failed |
-| 시스템 및 CLI 테스트 | 6 passed / 0 failed |
-| 전체 | 14 passed / 0 failed |
+| 유닛 테스트 | 9 passed / 0 failed |
+| 시스템 및 CLI 테스트 | 8 passed / 0 failed |
+| 전체 | 17 passed / 0 failed |
 | 상세 문서 | `docs/test_results.md` |

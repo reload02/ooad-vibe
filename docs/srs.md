@@ -413,8 +413,8 @@ sequenceDiagram
 | 주요 주체 | Front Sensor, Left Sensor, Right Sensor |
 | 목표 | 전방, 좌측, 우측이 모두 막힌 상황에서 탈출 가능한 상태까지 이동한다. |
 | 사전 조건 | RVC가 자동 청소 중이며 전방, 좌측, 우측이 모두 막혀 있다. |
-| 기본 흐름 | 시스템은 `Escaping` 상태로 전환하고 전방, 좌측, 우측 중 하나 이상이 열릴 때까지 후진 명령을 지속한다. |
-| 사후 조건 | 탈출 가능해지면 청소 상태로 복귀하거나 열린 방향으로 회전한다. |
+| 기본 흐름 | 시스템은 `Escaping` 상태로 전환하고 좌측 또는 우측 측면 탈출구가 열릴 때까지 후진 명령을 지속한다. |
+| 사후 조건 | 탈출 가능해지면 열린 측면 방향으로 회전하고 청소를 계속할 수 있는 상태로 복귀한다. |
 
 ```mermaid
 sequenceDiagram
@@ -430,7 +430,7 @@ sequenceDiagram
     LeftSensor-->>System: leftObstacle = true
     RightSensor-->>System: rightObstacle = true
     System->>System: enterEscaping()
-    loop while front, left, and right are blocked
+    loop while left and right are blocked
         System-->>Motor: Command(Backward)
         Clock->>System: tick()
         opt front is still blocked
@@ -439,11 +439,7 @@ sequenceDiagram
         LeftSensor-->>System: leftObstacle
         RightSensor-->>System: rightObstacle
     end
-    alt front is open
-        System-->>Motor: Command(Forward)
-    else side is open
-        System-->>Motor: Command(TurnLeft or TurnRight)
-    end
+    System-->>Motor: Command(TurnLeft or TurnRight)
 ```
 
 #### 3.2.5 UC-05 Boost Cleaning On Dust / SSD-04
@@ -505,9 +501,9 @@ sequenceDiagram
 | FR-08 | If front is blocked and only right is open, System shall turn right. | `frontObstacle=true`, `leftObstacle=true`, `rightObstacle=false`이면 `motion=TurnRight`를 반환한다. | UC-03 |
 | FR-09 | If front is blocked and both left and right are open, System shall choose turn direction by alternating left and right. | 동일 조건이 반복되면 첫 선택은 좌회전, 다음 선택은 우회전처럼 방향을 번갈아 반환한다. | UC-03 |
 | FR-10 | If front, left, and right are all blocked, System shall enter `Escaping` state. | 세 방향이 모두 막힌 tick 이후 컨트롤러 상태는 `Escaping`이 된다. | UC-04 |
-| FR-11 | In `Escaping` state, System shall keep moving backward until escape is possible. | `Escaping` 상태에서 세 방향이 계속 막혀 있으면 매 tick `motion=Backward`를 반환한다. | UC-04 |
-| FR-12 | Escape shall be considered possible when at least one of front, left, and right is open. | `Escaping` 상태에서 세 방향 중 하나 이상이 열리면 탈출 가능 상태로 판단한다. | UC-04 |
-| FR-13 | After escape becomes possible, System shall turn toward an open side or move forward if front is open. | 전방이 열리면 `Forward`, 전방은 막히고 한쪽 측면이 열리면 열린 방향 회전 명령을 반환한다. | UC-04 |
+| FR-11 | In `Escaping` state, System shall keep moving backward until escape is possible. | `Escaping` 상태에서 좌우 측면이 계속 막혀 있으면 매 tick `motion=Backward`를 반환한다. | UC-04 |
+| FR-12 | Escape shall be considered possible when at least one side direction is open. | `Escaping` 상태에서 좌측 또는 우측 중 하나 이상이 열리면 탈출 가능 상태로 판단한다. | UC-04 |
+| FR-13 | After escape becomes possible, System shall turn toward an open side. | 열린 측면 방향으로 `TurnLeft` 또는 `TurnRight` 명령을 반환한다. | UC-04 |
 | FR-14 | If dust is detected, System shall set cleaner power to boost for a configured number of ticks. | `dustDetected=true`인 tick에서 `cleaningPower=Boost`가 되고 `dustBoostTicks` 동안 유지된다. | UC-05 |
 | FR-15 | If boost duration expires and no new dust is detected, System shall return cleaner power to normal. | 먼지가 새로 감지되지 않고 boost 잔여 tick이 끝나면 `cleaningPower=Normal`로 복귀한다. | UC-05 |
 | FR-16 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | 지도 출력은 로봇 방향 문자, `#`, `.`, `*`를 사용해 현재 상태를 표현한다. | VS-01 |
@@ -556,7 +552,7 @@ sequenceDiagram
 | `Idle` | 청소하지 않는 대기 상태 | 초기 상태 또는 청소 중지 요청 | 청소 시작 요청 |
 | `Cleaning` | 기본 자동 청소 상태 | 청소 시작, 전방이 열린 상태, 탈출 완료 | 전방 interrupt, 청소 중지 |
 | `Avoiding` | 전방 장애물 회피를 위해 회전하는 상태 | 전방 interrupt 후 열린 좌/우 방향 존재 | 다음 tick에서 전방 상태에 따라 청소 또는 탈출 |
-| `Escaping` | 세 방향 막힘 상황에서 후진하는 상태 | 전방, 좌측, 우측이 모두 막힘 | 세 방향 중 하나 이상 열림 또는 청소 중지 |
+| `Escaping` | 세 방향 막힘 상황에서 후진하는 상태 | 전방, 좌측, 우측이 모두 막힘 | 좌측 또는 우측 중 하나 이상 열림 또는 청소 중지 |
 
 #### 3.7.2 Core Data Types
 
@@ -580,9 +576,9 @@ sequenceDiagram
 5. 전방이 막히고 우측만 열려 있으면 우회전한다.
 6. 전방이 막히고 좌측과 우측이 모두 열려 있으면 좌우를 번갈아 선택한다.
 7. 전방, 좌측, 우측이 모두 막히면 `Escaping` 상태로 전환한다.
-8. `Escaping` 상태에서는 탈출 가능 조건이 될 때까지 후진 명령을 지속한다.
-9. 탈출 가능 조건은 전방, 좌측, 우측 중 하나 이상이 열린 상태이다.
-10. 탈출 가능해진 뒤 전방이 열려 있으면 전진하고, 전방이 막힌 경우 열린 측면 방향으로 회전한다.
+8. `Escaping` 상태에서는 측면 탈출구가 열릴 때까지 후진 명령을 지속한다.
+9. 탈출 가능 조건은 좌측 또는 우측 중 하나 이상이 열린 상태이다.
+10. 탈출 가능해진 뒤 열린 측면 방향으로 회전한다.
 11. 먼지가 감지되면 `dustBoostTicks`만큼 `Boost`를 유지한다.
 12. boost 유지 시간이 끝나고 새 먼지가 감지되지 않으면 `Normal`로 복귀한다.
 
@@ -644,8 +640,9 @@ ctest --test-dir build -C Debug --output-on-failure
 | `TurnsTowardOpenSide` | FR-07, FR-08 |
 | `AlternatesWhenBothSidesAreOpen` | FR-09 |
 | `AllBlockedEntersEscapingAndKeepsBackingUp` | FR-10, FR-11 |
-| `EscapingExitsWhenFrontBecomesOpen` | FR-12, FR-13 |
+| `EscapingIgnoresOpenFrontUntilSideOpens` | FR-12, FR-13 |
 | `DustBoostLastsConfiguredTicks` | FR-14, FR-15 |
+| `AvoidanceOutputStaysOffWhileBoostStateIsMaintained` | FR-05, FR-14, FR-15 |
 
 ### B.3 System Test Criteria
 
@@ -654,6 +651,8 @@ ctest --test-dir build -C Debug --output-on-failure
 | `SimulatorCleansDustAndLogsCommands` | FR-14, FR-15, FR-17 |
 | `SimulatorUsesBackwardEscape` | FR-10, FR-11, FR-18 |
 | `SimulatorKeepsCommandingBackwardWhenBoxedIn` | FR-11 |
+| `SimulatorKeepsBackingUpUntilSideExitOpens` | FR-11, FR-12, FR-13 |
+| `SimulatorKeepsCleanerOffDuringBoostedEscape` | FR-10, FR-11, FR-14, FR-15 |
 | `SimulatorTurnsAfterFrontInterrupt` | FR-04, FR-05, FR-08 |
 | `SimulatorCliDefaultRuns` | FR-16, FR-17 |
 | `SimulatorCliContinuousBackwardScenarioRuns` | FR-10, FR-11, FR-16, FR-17 |
@@ -708,7 +707,7 @@ ctest --test-dir build -C Debug --output-on-failure
 | FR-04, FR-05 | `FrontInterruptTriggersImmediateAvoidance`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-07, FR-08 | `FrontInterruptTriggersImmediateAvoidance`, `TurnsTowardOpenSide`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-09 | `AlternatesWhenBothSidesAreOpen` |
-| FR-10, FR-11 | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsCommandingBackwardWhenBoxedIn` |
-| FR-12, FR-13 | `EscapingExitsWhenFrontBecomesOpen` |
-| FR-14, FR-15 | `DustBoostLastsConfiguredTicks`, `SimulatorCleansDustAndLogsCommands` |
-| FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
+| FR-10, FR-11 | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsCommandingBackwardWhenBoxedIn`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
+| FR-12, FR-13 | `EscapingIgnoresOpenFrontUntilSideOpens`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
+| FR-14, FR-15 | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained`, `SimulatorCleansDustAndLogsCommands`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
+| FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsBackingUpUntilSideExitOpens`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
