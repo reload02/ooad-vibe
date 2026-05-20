@@ -31,6 +31,7 @@ build\Debug\rvc_simulator.exe --ticks 10
 build\Debug\rvc_simulator.exe --scenario scenarios\dust_and_interrupt.rvc --quiet-map
 build\Debug\rvc_simulator.exe --scenario scenarios\backward_escape.rvc --quiet-map
 build\Debug\rvc_simulator.exe --scenario scenarios\continuous_backward.rvc --quiet-map
+build\Debug\rvc_simulator.exe --scenario scenarios\long_escape_right_exit_extreme.rvc --quiet-map
 ```
 
 ## Scenario Format
@@ -49,3 +50,5 @@ map:
 - `*`: dust
 - `R`: robot facing north
 - `^`, `>`, `v`, `<`: robot with direction
+
+추가 시나리오 목록과 FR/NFR/Use Case 매핑은 `docs/scenario_catalog.md`를 참고한다.

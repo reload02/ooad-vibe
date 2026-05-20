@@ -28,15 +28,19 @@ sequenceDiagram
     actor LeftSensor as Left Sensor
     actor RightSensor as Right Sensor
     actor Motor
+    actor Cleaner
 
     FrontSensor->>System: onFrontObstacleInterrupt()
     System->>Motor: stop()
+    System->>Cleaner: turnOff()
     System->>LeftSensor: readLeftObstacle()
     LeftSensor-->>System: leftObstacle
     System->>RightSensor: readRightObstacle()
     RightSensor-->>System: rightObstacle
     alt one side is open
         System->>Motor: turn(openDirection)
+        System->>Cleaner: setPower(Normal or Boost)
+        System->>Motor: moveForward()
     else both sides are blocked
         System->>Motor: moveBackward()
     end
@@ -93,6 +97,7 @@ sequenceDiagram
     actor LeftSensor as Left Sensor
     actor RightSensor as Right Sensor
     actor Motor
+    actor Cleaner
 
     FrontSensor->>System: onFrontObstacleInterrupt()
     Clock->>System: tick()
@@ -100,6 +105,7 @@ sequenceDiagram
     LeftSensor-->>System: leftObstacle = true
     System->>RightSensor: readRightObstacle()
     RightSensor-->>System: rightObstacle = true
+    System->>Cleaner: turnOff()
     System->>System: enterEscaping()
     loop while left and right are blocked
         System->>Motor: moveBackward()
@@ -114,6 +120,8 @@ sequenceDiagram
     end
     alt side is open
         System->>Motor: turn(openDirection)
+        System->>Cleaner: setPower(Normal or Boost)
+        System->>Motor: moveForward()
     end
 ```
 
@@ -136,4 +144,4 @@ sequenceDiagram
 | `stopCleaning()` | FR-02 | cleaner off와 motor stop을 의미한다. |
 | `onFrontObstacleInterrupt()` | FR-04, FR-05 | interrupt는 다음 `tick()`보다 먼저 들어올 수 있다. |
 | `tick(periodicSensors)` | FR-06 | Digital Clock의 제어 주기마다 호출된다. |
-| `decideNextCommand(snapshot)` | FR-07 to FR-15 | 회피, 탈출, boost 규칙을 포함한다. |
+| `decideNextCommand(snapshot)` | FR-07 to FR-18 | 회피, 탈출, boost, cleaner off 우선순위 규칙을 포함한다. |

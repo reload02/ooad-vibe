@@ -1,0 +1,7 @@
+# 오류 기대 / UC-06 / FR-17
+# 음수 tick은 run 단계에서 maxTicks 검증 실패가 발생해야 한다.
+ticks=-1
+map:
+...
+.R.
+...
