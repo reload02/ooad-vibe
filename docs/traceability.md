@@ -33,7 +33,7 @@
 | FR-07, FR-08 | `FrontInterruptTriggersImmediateAvoidance`, `TurnsTowardOpenSide`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-09 | `AlternatesWhenBothSidesAreOpen` |
 | FR-10, FR-11 | `AllBlockedEntersEscapingAndKeepsBackingUp` |
-| FR-12, FR-13 | `EscapingExitsWhenFrontBecomesOpen` |
+| FR-12, FR-13 | `EscapingIgnoresOpenFrontUntilSideOpens`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
 | FR-14, FR-15 | `DustBoostLastsConfiguredTicks` |
 | FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
 

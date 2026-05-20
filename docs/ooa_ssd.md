@@ -50,6 +50,7 @@ sequenceDiagram
     actor LeftSensor as Left Sensor
     actor RightSensor as Right Sensor
     actor Motor
+    actor Cleaner
 
     FrontSensor->>System: onFrontObstacleInterrupt()
     System->>System: mark front interrupt pending
@@ -110,16 +111,18 @@ sequenceDiagram
     actor LeftSensor as Left Sensor
     actor RightSensor as Right Sensor
     actor Motor
+    actor Cleaner
 
     FrontSensor->>System: onFrontObstacleInterrupt()
     Clock->>System: tick()
     LeftSensor-->>System: leftObstacle = true
     RightSensor-->>System: rightObstacle = true
+    System->>Cleaner: turnOff()
     System->>System: enterEscaping()
     loop while front, left, and right are blocked
         System-->>Motor: Command(Backward)
         Clock->>System: tick()
-        opt front is still blocked
+        opt front is blocked
             FrontSensor->>System: onFrontObstacleInterrupt()
         end
         LeftSensor-->>System: leftObstacle
@@ -151,4 +154,4 @@ sequenceDiagram
 | `stopCleaning()` | FR-02 | 실행 상태와 boost timer를 초기화하며 다음 `tick()`에서 `Stop`/`Off` command가 생성된다. |
 | `onFrontObstacleInterrupt()` | FR-04, FR-05 | interrupt는 다음 `tick()`보다 먼저 들어올 수 있다. |
 | `tick(periodicSensors)` | FR-06 | Digital Clock의 제어 주기마다 호출된다. |
-| `decideNextCommand(snapshot)` | FR-07 to FR-15 | 회피, 탈출, boost 규칙을 포함한다. |
+| `decideNextCommand(snapshot)` | FR-07 to FR-18 | 회피, 탈출, boost, cleaner off 우선순위 규칙을 포함한다. |

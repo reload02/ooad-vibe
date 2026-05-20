@@ -45,6 +45,7 @@ TEST(RvcSystemTest, SimulatorUsesBackwardEscape) {
     const rvc::SimulationResult result = simulator.run(1, false);
 
     EXPECT_TRUE(containsLog(result.logs, "motion=Backward"));
+    EXPECT_TRUE(containsLog(result.logs, "motion=Backward cleaner=Off"));
     EXPECT_EQ(result.finalPosition, (Position{3, 2}));
     EXPECT_EQ(result.finalDirection, Direction::North);
 }
@@ -66,6 +67,47 @@ TEST(RvcSystemTest, SimulatorKeepsCommandingBackwardWhenBoxedIn) {
     EXPECT_EQ(backwardCommands, 5);
     EXPECT_EQ(result.finalPosition, (Position{2, 2}));
     EXPECT_EQ(result.finalDirection, Direction::North);
+}
+
+TEST(RvcSystemTest, SimulatorKeepsBackingUpUntilSideExitOpens) {
+    GridSimulator simulator = GridSimulator::fromLines({
+        "#####",
+        "#####",
+        "##^##",
+        "##.##",
+        "##..#",
+        "#####",
+    });
+
+    const rvc::SimulationResult result = simulator.run(3, false);
+    const int backwardCommands = static_cast<int>(std::count_if(result.logs.begin(), result.logs.end(), [](const auto& line) {
+        return line.find("motion=Backward") != std::string::npos;
+    }));
+
+    EXPECT_EQ(backwardCommands, 2);
+    EXPECT_TRUE(containsLog(result.logs, "tick=2 frontInterrupt=false"));
+    EXPECT_TRUE(containsLog(result.logs, "tick=2 frontInterrupt=false leftPeriodic=blocked rightPeriodic=blocked"));
+    EXPECT_TRUE(containsLog(result.logs, "tick=3 frontInterrupt=false leftPeriodic=blocked rightPeriodic=open"));
+    EXPECT_TRUE(containsLog(result.logs, "motion=TurnRight"));
+    EXPECT_TRUE(containsLog(result.logs, "motion=TurnRight cleaner=Off"));
+    EXPECT_EQ(result.finalPosition, (Position{4, 2}));
+    EXPECT_EQ(result.finalDirection, Direction::East);
+}
+
+TEST(RvcSystemTest, SimulatorKeepsCleanerOffDuringBoostedEscape) {
+    GridSimulator simulator = GridSimulator::fromLines({
+        "#######",
+        "#>*..##",
+        "###.###",
+        "###.###",
+        "#######",
+    });
+
+    const rvc::SimulationResult result = simulator.run(5, false);
+
+    EXPECT_TRUE(containsLog(result.logs, "motion=Forward cleaner=Boost"));
+    EXPECT_TRUE(containsLog(result.logs, "motion=Backward cleaner=Off"));
+    EXPECT_TRUE(containsLog(result.logs, "motion=TurnRight cleaner=Off"));
 }
 
 TEST(RvcSystemTest, SimulatorTurnsAfterFrontInterrupt) {
