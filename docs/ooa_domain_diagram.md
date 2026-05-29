@@ -2,110 +2,82 @@
 
 ## 1. Domain Model
 
-이 다이어그램의 `Motor`, `Cleaner`, sensor 항목은 문제 영역의 도메인 개념이며 C++ 구현 클래스를 의미하지 않는다. 현재 구현에서는 `RvcController`가 `Command`를 생성하고 `GridSimulator`가 이를 검증 환경에 적용한다.
-
 ```mermaid
 classDiagram
     class RVC {
-        +currentDirection
-        +currentPosition
-    }
-
-    class RvcController {
-        +state
         +startCleaning()
         +stopCleaning()
         +tick()
-        +onFrontObstacleInterrupt()
     }
 
-    class FrontSensor {
-        +interruptOnObstacle()
+    class SensorFusion {
+        +fuse(periodicSensors) SensorSnapshot
+        +recordFrontObstacleInterrupt()
     }
 
-    class PeriodicSensor {
-        +read()
+    class RvcController {
+        +tick(periodicSensors) Command
+        +decideNextCommand(snapshot) Command
     }
 
-    class LeftSensor
-    class RightSensor
-    class DustSensor
-
-    class DigitalClock {
-        +tick()
+    class NavigationPolicy {
+        +decide(snapshot) NavigationDecision
     }
 
-    class Motor {
-        +moveForward()
-        +moveBackward()
-        +turnLeft()
-        +turnRight()
-        +stop()
+    class CleaningPolicy {
+        +update(dustDetected) CleaningPower
     }
 
-    class Cleaner {
-        +setNormalPower()
-        +setBoostPower()
-        +turnOff()
+    class CommandComposer {
+        +compose(motion, power, reason) Command
     }
 
-    class Environment {
-        +obstacles
-        +dustCells
+    class GridSimulator {
+        +run(maxTicks, includeFrames) SimulationResult
+        +render() string
     }
 
-    class Command {
-        +motion
-        +cleaningPower
-        +reason
-    }
+    class Environment
+    class FrontSensor
+    class PeriodicSensorData
+    class SensorSnapshot
+    class Command
+    class Motor
+    class Cleaner
 
     RVC *-- RvcController
-    RVC *-- Motor
-    RVC *-- Cleaner
-    RVC *-- FrontSensor
-    RVC *-- LeftSensor
-    RVC *-- RightSensor
-    RVC *-- DustSensor
-    PeriodicSensor <|-- LeftSensor
-    PeriodicSensor <|-- RightSensor
-    PeriodicSensor <|-- DustSensor
-    DigitalClock --> RvcController : tick
-    FrontSensor --> RvcController : interrupt
-    LeftSensor --> RvcController : periodic data
-    RightSensor --> RvcController : periodic data
-    DustSensor --> RvcController : periodic data
-    RvcController --> Command : creates
-    Command --> Motor : motion
-    Command --> Cleaner : cleaning power
-    Environment --> FrontSensor : sensed by
-    Environment --> LeftSensor : sensed by
-    Environment --> RightSensor : sensed by
-    Environment --> DustSensor : sensed by
+    RvcController *-- SensorFusion
+    RvcController *-- NavigationPolicy
+    RvcController *-- CleaningPolicy
+    RvcController *-- CommandComposer
+    FrontSensor --> SensorFusion : interrupt
+    Environment --> PeriodicSensorData : left/right/dust samples
+    SensorFusion --> SensorSnapshot
+    NavigationPolicy --> Command : motion intent
+    CleaningPolicy --> Command : cleaning power candidate
+    CommandComposer --> Command
+    Command --> Motor : motion request
+    Command --> Cleaner : cleaning power request
+    GridSimulator --> Environment : owns grid state
+    GridSimulator --> RVC : provides sensed inputs
+    GridSimulator --> Command : applies result to grid pose/dust
 ```
 
-## 2. Domain Concepts
+## 2. Domain Responsibilities
 
 | Concept | Responsibility |
 | --- | --- |
-| RVC | household surface를 자동으로 청소하고 물걸레질하는 물리적 로봇 청소기 전체를 의미한다. |
-| RvcController | 센서 입력과 interrupt를 기반으로 motor/cleaner 명령을 결정한다. |
-| FrontSensor | 전방 장애물을 interrupt로 알린다. |
-| LeftSensor | 좌측 장애물 상태를 periodic 방식으로 제공한다. |
-| RightSensor | 우측 장애물 상태를 periodic 방식으로 제공한다. |
-| DustSensor | 현재 위치의 먼지 감지 상태를 periodic 방식으로 제공한다. |
-| DigitalClock | 제어 tick을 발생시킨다. |
-| Motor | 전진, 후진, 좌회전, 우회전, 정지 동작을 수행한다. |
-| Cleaner | normal power, boost power, off 상태를 수행하며, 현재 모델에서는 청소/물걸레질 출력을 대표하는 추상 actuator이다. |
-| Environment | 장애물과 먼지가 있는 청소 공간이다. |
-| Command | controller가 actuator에 전달하는 추상 명령이다. |
+| `RVC` | 실제 로봇 전체를 나타내는 facade이다. 외부에서 들어온 감지 입력을 내부 제어 흐름으로 전달하고 최종 `Command`를 반환한다. |
+| `RvcController` | RVC 내부 제어 흐름을 조율한다. 직접 센서 결합, 이동 판단, 청소 세기 판단을 모두 구현하지 않고 subsystem에 위임한다. |
+| `SensorFusion` | 전방 interrupt와 주기 센서 값을 하나의 `SensorSnapshot`으로 정규화한다. |
+| `NavigationPolicy` | 현재 제어 상태와 sensor snapshot을 바탕으로 이동 의도인 `Motion`을 결정한다. |
+| `CleaningPolicy` | 먼지 감지와 boost tick 예산을 바탕으로 청소 세기 후보를 결정한다. |
+| `CommandComposer` | 이동 의도와 청소 세기 후보를 actuator 요청인 `Command`로 조립한다. 전진 외 동작에서는 cleaner를 `Off`로 강제한다. |
+| `GridSimulator` | 검증용 환경이다. 격자 map, 로봇의 격자상 위치와 방향, 먼지 상태를 소유하고 RVC가 반환한 command를 환경에 적용한다. |
+| `Motor`, `Cleaner`, `Sensor` | 실제 로봇의 하드웨어 역할이다. 현재 구현에서는 concrete hardware driver 대신 `Command`와 simulator 적용으로 추상화한다. |
 
-## 3. Important Domain Rules
+## 3. Boundary
 
-- FrontSensor는 polling 대상이 아니라 interrupt source이다.
-- LeftSensor, RightSensor, DustSensor는 DigitalClock tick에 맞춰 sampling된다.
-- RvcController는 sensor와 actuator의 구체 구현을 알지 않는다.
-- PDF DFD Level 0의 `Tick`, `Direction`, `Clean` 흐름은 각각 `DigitalClock.tick()`, `Command.motion`, `Command.cleaningPower`에 대응된다.
-- 회피/탈출 이동인 `Backward`, `TurnLeft`, `TurnRight` 동안 cleaner output은 `Off`이며, `Forward` 전진 청소에서만 `Normal` 또는 `Boost`가 적용된다.
-- `Escaping` 상태에서는 후방 센서 없이 backward command를 반복하며, 좌/우 중 한쪽이 열릴 때까지 전방 open 여부를 탈출 조건으로 사용하지 않는다.
-- Simulator의 Environment는 실제 하드웨어가 아니라 테스트용 외부 세계이다.
+- RVC는 실제 로봇 전체의 제어 facade이지만, simulator 전용 좌표인 `Position`과 격자 기준 `Direction`은 소유하지 않는다.
+- 위치와 방향은 `GridSimulator`가 검증 환경 상태로 보관한다.
+- RVC 내부 SOLID 적용 단위는 `SensorFusion`, `NavigationPolicy`, `CleaningPolicy`, `CommandComposer`이다.

@@ -4,13 +4,22 @@
 
 ```mermaid
 classDiagram
+    class Rvc {
+        -RvcController controller
+        +startCleaning()
+        +stopCleaning()
+        +onFrontObstacleInterrupt()
+        +tick(PeriodicSensorData) Command
+        +readPeriodicSensors(PeriodicSensorData) SensorSnapshot
+        +state() ControllerState
+    }
+
     class RvcController {
-        -ControllerConfig config
-        -ControllerState state
+        -SensorFusion sensorFusion
+        -NavigationPolicy navigationPolicy
+        -CleaningPolicy cleaningPolicy
+        -CommandComposer commandComposer
         -bool running
-        -bool frontInterruptPending
-        -bool preferLeftTurn
-        -int boostTicksRemaining
         +startCleaning()
         +stopCleaning()
         +onFrontObstacleInterrupt()
@@ -19,105 +28,96 @@ classDiagram
         +decideNextCommand(SensorSnapshot) Command
     }
 
-    class ControllerConfig {
-        +int dustBoostTicks
+    class SensorFusion {
+        -bool frontInterruptPending
+        +recordFrontObstacleInterrupt()
+        +clearFrontObstacleInterrupt()
+        +fuse(PeriodicSensorData) SensorSnapshot
     }
 
-    class PeriodicSensorData {
-        +bool leftObstacle
-        +bool rightObstacle
-        +bool dustDetected
+    class NavigationPolicy {
+        -ControllerState state
+        -bool preferLeftTurn
+        +startCleaning()
+        +stopCleaning()
+        +decide(SensorSnapshot) NavigationDecision
+        +state() ControllerState
     }
 
-    class SensorSnapshot {
-        +bool frontObstacle
-        +bool leftObstacle
-        +bool rightObstacle
-        +bool dustDetected
+    class CleaningPolicy {
+        -ControllerConfig config
+        -int boostTicksRemaining
+        +update(bool) CleaningPower
+        +reset()
     }
 
-    class Command {
-        +Motion motion
-        +CleaningPower cleaningPower
-        +string reason
+    class CommandComposer {
+        +compose(Motion, CleaningPower, string) Command
     }
 
     class GridSimulator {
         -vector~string~ grid
         -Position robot
         -Direction direction
-        -RvcController controller
+        -Rvc rvc
         +fromLines(lines) GridSimulator
-        +loadScenario(path) Scenario
-        +defaultMap() vector~string~
         +run(maxTicks, includeFrames) SimulationResult
         +step(tick, includeFrame) bool
         +render() string
-        +remainingDust() int
     }
 
-    class Scenario {
-        +vector~string~ mapLines
-        +int ticks
-    }
-
-    class SimulationResult {
-        +int ticksRun
-        +int dustCleaned
-        +Position finalPosition
-        +Direction finalDirection
-        +vector~string~ logs
-    }
-
-    class Position {
-        +int row
-        +int col
-    }
-
+    class PeriodicSensorData
+    class SensorSnapshot
+    class NavigationDecision
+    class Command
+    class ControllerConfig
+    class SimulationResult
+    class Position
     class Direction
     class Motion
     class CleaningPower
     class ControllerState
 
-    RvcController --> ControllerConfig
+    Rvc *-- RvcController
+    RvcController *-- SensorFusion
+    RvcController *-- NavigationPolicy
+    RvcController *-- CleaningPolicy
+    RvcController *-- CommandComposer
     RvcController --> PeriodicSensorData
     RvcController --> SensorSnapshot
     RvcController --> Command
-    GridSimulator *-- RvcController
-    GridSimulator --> Scenario
-    GridSimulator --> SimulationResult
+    NavigationPolicy --> NavigationDecision
+    CleaningPolicy --> ControllerConfig
+    GridSimulator *-- Rvc
     GridSimulator --> Position
+    GridSimulator --> SimulationResult
 ```
 
 ## 2. Class Responsibilities
 
 | Class | Responsibility |
 | --- | --- |
-| `RvcController` | 문서의 system interface를 구현하고 핵심 제어 규칙에 따라 command를 결정한다. |
-| `ControllerConfig` | boost duration 같은 제어 정책 값을 제공한다. |
-| `PeriodicSensorData` | 좌측, 우측, 먼지 periodic sensor 값을 전달한다. |
-| `SensorSnapshot` | pending front interrupt와 periodic sensor 값을 결합한 판단 입력이다. |
-| `Command` | motor motion과 cleaner power를 함께 표현하는 추상 actuator 명령이다. `Forward`에서는 `Normal` 또는 `Boost`를 전달하고, `Backward`, `TurnLeft`, `TurnRight`, `Stop`에서는 cleaner output `Off`를 전달한다. |
-| `GridSimulator` | 격자 환경에서 sensor/event를 만들고 controller command를 적용한다. |
-| `Scenario` | 시나리오 파일에서 읽은 지도와 기본 tick 수를 담는다. |
-| `SimulationResult` | 시스템 테스트와 CLI 출력에 필요한 실행 결과를 담는다. |
+| `Rvc` | 실제 로봇 전체 facade이다. 외부 API를 제공하고 내부 controller에 위임한다. |
+| `RvcController` | RVC 내부 subsystem을 조율해 최종 command를 만든다. |
+| `SensorFusion` | front interrupt와 periodic sensor data를 판단용 snapshot으로 결합한다. |
+| `NavigationPolicy` | 이동 상태와 장애물 정보를 기반으로 motion을 결정한다. |
+| `CleaningPolicy` | dust boost duration과 normal/boost 후보 세기를 관리한다. |
+| `CommandComposer` | motion과 cleaning power 후보를 최종 actuator command로 변환한다. |
+| `GridSimulator` | 격자 환경, robot marker 위치, 방향, 먼지 상태를 소유하고 command를 적용한다. |
 
 ## 3. SOLID Analysis
 
 | Principle | Application |
 | --- | --- |
-| SRP | `RvcController`는 제어 결정만 담당하고, `GridSimulator`는 환경과 이동 적용만 담당한다. |
-| OCP | sensor 입력은 `PeriodicSensorData`와 interrupt API로 추상화되어 새 sensor 추가 시 controller 확장이 가능하다. |
-| LSP | simulator와 실제 하드웨어 어댑터는 같은 `Command` 의미를 따르므로 대체 가능하다. |
-| ISP | controller의 public interface는 시작, 중지, interrupt, tick, 판단에 필요한 작은 operation으로 분리된다. |
-| DIP | controller는 concrete simulator나 hardware에 의존하지 않고 값 객체와 추상 command에만 의존한다. |
+| SRP | 감지 결합, 이동 판단, 청소 세기 판단, command 조립이 각각 별도 클래스로 분리된다. |
+| OCP | 새 sensor 결합 방식, 이동 정책, 청소 정책은 해당 subsystem 확장으로 다룰 수 있다. |
+| LSP | `GridSimulator`는 RVC의 `Command` 계약만 사용하므로 실제 actuator 적용 대상으로 대체 가능하다. |
+| ISP | `Rvc`와 `RvcController` public API는 start, stop, interrupt, tick 중심으로 작게 유지된다. |
+| DIP | 제어 판단은 concrete simulator나 실제 hardware driver에 의존하지 않고 sensor data와 command 값에 의존한다. |
 
 ## 4. Design Decisions
 
-- 전방 장애물은 `onFrontObstacleInterrupt()`로만 controller에 전달한다.
-- 좌/우/먼지 값은 `tick(PeriodicSensorData)` 호출마다 controller에 전달한다.
-- `readPeriodicSensors()`는 pending front interrupt와 periodic 값을 결합하여 `SensorSnapshot`을 만든다.
-- `decideNextCommand()`는 단일 판단 지점으로 두어 테스트를 쉽게 한다.
-- `Escaping` 상태에서 좌/우가 계속 막혀 있으면 전방 interrupt 여부와 관계없이 반드시 `Backward` command를 반복한다.
-- cleaner output 정책은 motion이 우선한다. 회피/탈출 이동 중에는 dust boost 상태가 남아 있어도 `Off`가 command에 기록되고, 전진 청소 재개 시 남은 boost 상태에 따라 `Boost` 또는 `Normal`을 기록한다.
-- PDF DFD Level 0의 `Direction`, `Clean`, `Tick`은 각각 `Command.motion`, `Command.cleaningPower`, `tick(PeriodicSensorData)` 설계 요소로 대응된다.
+- `Position`과 `Direction`은 simulator 격자 상태이므로 `Rvc`가 소유하지 않는다.
+- `Rvc`는 실제 로봇 전체의 facade로 남고, 내부 OOD/SOLID 적용은 subsystem 조합으로 표현한다.
+- 전진 중에만 cleaner output을 `Normal` 또는 `Boost`로 내보내고, 회피/후진/정지 중에는 `CommandComposer`가 `Off`로 강제한다.
+- 기존 CLI, scenario file, log 의미는 유지한다.

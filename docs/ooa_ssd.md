@@ -1,157 +1,116 @@
 # RVC OOA System Sequence Diagrams
 
-## 1. Overview
-
-이 문서는 RVC Control SW의 OOA 단계 산출물로, 외부 actor와 system 사이의 이벤트 흐름을 System Sequence Diagram으로 정리한다. 전방 센서는 interrupt actor이고, 좌측/우측/먼지 센서는 periodic actor로 모델링한다.
-
-## 2. SSD-01 Start Automatic Cleaning
+## 1. SSD-01 Start Automatic Cleaning
 
 ```mermaid
 sequenceDiagram
     actor User
-    actor Clock as Digital Clock
-    participant System as RVC Control SW
+    participant RVC as RVC
     actor Motor
     actor Cleaner
 
-    User->>System: startCleaning()
-    System->>System: state = Cleaning, running = true
-    System-->>User: cleaningStarted
-    Clock->>System: tick(periodicSensors)
-    System-->>Motor: Command(Forward)
-    System-->>Cleaner: Command(Normal)
+    User->>RVC: startCleaning()
+    User->>RVC: tick(periodicSensors)
+    RVC-->>Motor: Command(Forward)
+    RVC-->>Cleaner: Command(Normal)
 ```
 
-## 3. SSD-06 Stop Automatic Cleaning
+## 2. SSD-02 Stop Automatic Cleaning
 
 ```mermaid
 sequenceDiagram
     actor User
-    actor Clock as Digital Clock
-    participant System as RVC Control SW
+    participant RVC as RVC
     actor Motor
     actor Cleaner
 
-    User->>System: stopCleaning()
-    System->>System: state = Idle, running = false, boostTicksRemaining = 0
-    System-->>User: cleaningStopped
-    Clock->>System: tick(periodicSensors)
-    System-->>Motor: Command(Stop)
-    System-->>Cleaner: Command(Off)
+    User->>RVC: stopCleaning()
+    User->>RVC: tick(periodicSensors)
+    RVC-->>Motor: Command(Stop)
+    RVC-->>Cleaner: Command(Off)
 ```
 
-## 4. SSD-02 Front Obstacle Interrupt
+## 3. SSD-03 Front Obstacle Avoidance
 
 ```mermaid
 sequenceDiagram
     actor FrontSensor as Front Sensor
-    actor Clock as Digital Clock
-    participant System as RVC Control SW
     actor LeftSensor as Left Sensor
     actor RightSensor as Right Sensor
+    participant RVC as RVC
     actor Motor
     actor Cleaner
 
-    FrontSensor->>System: onFrontObstacleInterrupt()
-    System->>System: mark front interrupt pending
-    Clock->>System: tick(periodicSensors)
-    LeftSensor-->>System: leftObstacle
-    RightSensor-->>System: rightObstacle
-    alt one side is open
-        System-->>Motor: Command(TurnLeft or TurnRight)
-    else both sides are blocked
-        System-->>Motor: Command(Backward)
-    end
+    FrontSensor->>RVC: onFrontObstacleInterrupt()
+    LeftSensor-->>RVC: leftObstacle
+    RightSensor-->>RVC: rightObstacle
+    RVC->>RVC: tick(periodicSensors)
+    RVC-->>Motor: Command(TurnLeft or TurnRight)
+    RVC-->>Cleaner: Command(Off)
 ```
 
-## 5. SSD-03 Periodic Sensor Sampling
+## 4. SSD-04 Dust Boost
 
 ```mermaid
 sequenceDiagram
-    actor Clock as Digital Clock
-    participant System as RVC Control SW
-    actor LeftSensor as Left Sensor
-    actor RightSensor as Right Sensor
     actor DustSensor as Dust Sensor
-
-    Clock->>System: tick()
-    LeftSensor-->>System: leftObstacle
-    RightSensor-->>System: rightObstacle
-    DustSensor-->>System: dustDetected
-    System->>System: updatePeriodicSensorSnapshot()
-```
-
-## 6. SSD-04 Boost Cleaning On Dust
-
-```mermaid
-sequenceDiagram
-    actor Clock as Digital Clock
-    actor DustSensor as Dust Sensor
-    participant System as RVC Control SW
+    participant RVC as RVC
     actor Cleaner
 
-    Clock->>System: tick()
-    DustSensor-->>System: dustDetected = true
-    System->>System: startBoostTimer()
-    System-->>Cleaner: Command(Boost)
-    loop until boost timer expires
-        Clock->>System: tick()
-        System-->>Cleaner: Command(Boost)
+    DustSensor-->>RVC: dustDetected = true
+    RVC->>RVC: tick(periodicSensors)
+    RVC-->>Cleaner: Command(Boost) when motion is Forward
+    loop configured boost ticks
+        RVC->>RVC: tick(dustDetected = false)
+        RVC-->>Cleaner: Command(Boost or Off by motion)
     end
-    System-->>Cleaner: Command(Normal)
 ```
 
-## 7. SSD-05 Escape From Blocked Area
+## 5. SSD-05 Escape From Blocked Area
 
 ```mermaid
 sequenceDiagram
     actor FrontSensor as Front Sensor
-    actor Clock as Digital Clock
-    participant System as RVC Control SW
     actor LeftSensor as Left Sensor
     actor RightSensor as Right Sensor
+    participant RVC as RVC
     actor Motor
     actor Cleaner
 
-    FrontSensor->>System: onFrontObstacleInterrupt()
-    Clock->>System: tick()
-    LeftSensor-->>System: leftObstacle = true
-    RightSensor-->>System: rightObstacle = true
-    System->>Cleaner: turnOff()
-    System->>System: enterEscaping()
-    loop while front, left, and right are blocked
-        System-->>Motor: Command(Backward)
-        Clock->>System: tick()
-        opt front is blocked
-            FrontSensor->>System: onFrontObstacleInterrupt()
-        end
-        LeftSensor-->>System: leftObstacle
-        RightSensor-->>System: rightObstacle
+    FrontSensor->>RVC: onFrontObstacleInterrupt()
+    LeftSensor-->>RVC: leftObstacle = true
+    RightSensor-->>RVC: rightObstacle = true
+    RVC->>RVC: tick(periodicSensors)
+    RVC-->>Motor: Command(Backward)
+    RVC-->>Cleaner: Command(Off)
+    loop while both sides blocked
+        RVC->>RVC: tick(periodicSensors)
+        RVC-->>Motor: Command(Backward)
     end
-    alt front is open
-        System-->>Motor: Command(Forward)
-    else side is open
-        System-->>Motor: Command(TurnLeft or TurnRight)
-    end
+    RVC-->>Motor: Command(TurnLeft or TurnRight)
 ```
 
-## 8. System Interface
+## 6. SSD-06 Simulator Verification
+
+```mermaid
+sequenceDiagram
+    participant Simulator as GridSimulator
+    participant RVC as RVC
+
+    Simulator->>Simulator: calculate front/left/right/dust from grid
+    opt front obstacle
+        Simulator->>RVC: onFrontObstacleInterrupt()
+    end
+    Simulator->>RVC: tick(periodicSensors)
+    RVC-->>Simulator: Command
+    Simulator->>Simulator: apply motion, cleaner power, position, direction, dust
+```
+
+## 7. System Operations
 
 | Operation | Input | Output | Responsibility |
 | --- | --- | --- | --- |
-| `startCleaning()` | none | none | 자동 청소를 시작하고 controller state를 cleaning으로 전환한다. |
-| `stopCleaning()` | none | none | 이동과 청소를 중지하고 controller state를 idle로 전환한다. |
-| `onFrontObstacleInterrupt()` | none | none | 전방 장애물 interrupt를 기록하여 다음 제어 판단에서 즉시 회피하게 한다. |
-| `tick(periodicSensors)` | `PeriodicSensorData` | `Command` | 주기 센서 값을 반영하고 다음 motor/cleaner 명령을 결정한다. |
-| `readPeriodicSensors(periodicSensors)` | `PeriodicSensorData` | `SensorSnapshot` | 좌측, 우측, 먼지 periodic 값과 pending front interrupt를 하나의 snapshot으로 결합한다. |
-| `decideNextCommand(snapshot)` | `SensorSnapshot` | `Command` | 핵심 제어 규칙에 따라 다음 동작 명령을 계산한다. |
-
-## 9. System Operations
-
-| Operation | Related FR | Notes |
-| --- | --- | --- |
-| `startCleaning()` | FR-01, FR-03 | 실행 상태를 시작하며 실제 전진/청소 명령은 다음 `tick()`에서 생성된다. |
-| `stopCleaning()` | FR-02 | 실행 상태와 boost timer를 초기화하며 다음 `tick()`에서 `Stop`/`Off` command가 생성된다. |
-| `onFrontObstacleInterrupt()` | FR-04, FR-05 | interrupt는 다음 `tick()`보다 먼저 들어올 수 있다. |
-| `tick(periodicSensors)` | FR-06 | Digital Clock의 제어 주기마다 호출된다. |
-| `decideNextCommand(snapshot)` | FR-07 to FR-18 | 회피, 탈출, boost, cleaner off 우선순위 규칙을 포함한다. |
+| `startCleaning()` | none | none | RVC를 running 상태로 전환한다. |
+| `stopCleaning()` | none | none | RVC를 idle 상태로 전환하고 cleaner output을 끈다. |
+| `onFrontObstacleInterrupt()` | none | none | 전방 장애물 event를 pending 상태로 기록한다. |
+| `tick(periodicSensors)` | `PeriodicSensorData` | `Command` | 감지 결합, 이동 판단, 청소 세기 판단, command 조립을 수행한다. |

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "rvc/RvcSubsystems.hpp"
+#include "rvc/RvcController.hpp"
 
 namespace rvc {
 
-class RvcController {
+class Rvc {
 public:
-    explicit RvcController(ControllerConfig config = {});
+    explicit Rvc(ControllerConfig config = {});
 
     void startCleaning();
     void stopCleaning();
@@ -14,18 +14,13 @@ public:
 
     [[nodiscard]] Command tick(const PeriodicSensorData& periodicSensors);
     [[nodiscard]] SensorSnapshot readPeriodicSensors(const PeriodicSensorData& periodicSensors) const;
-    [[nodiscard]] Command decideNextCommand(const SensorSnapshot& snapshot);
 
     [[nodiscard]] ControllerState state() const;
     [[nodiscard]] bool isRunning() const;
     [[nodiscard]] int boostTicksRemaining() const;
 
 private:
-    SensorFusion sensorFusion_;
-    NavigationPolicy navigationPolicy_;
-    CleaningPolicy cleaningPolicy_;
-    CommandComposer commandComposer_;
-    bool running_{false};
+    RvcController controller_;
 };
 
 }  // namespace rvc

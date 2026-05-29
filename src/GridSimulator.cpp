@@ -147,11 +147,11 @@ bool GridSimulator::step(int tick, bool includeFrame) {
 
     const bool frontObstacle = isObstacle(forwardPosition());
     if (frontObstacle) {
-        controller_.onFrontObstacleInterrupt();
+        rvc_.onFrontObstacleInterrupt();
     }
 
     const PeriodicSensorData sensors = samplePeriodicSensors();
-    const Command command = controller_.tick(sensors);
+    const Command command = rvc_.tick(sensors);
 
     cleanCurrentCell(command);
     applyMotion(command.motion);
@@ -313,7 +313,7 @@ void GridSimulator::applyMotion(Motion motion) {
 
 void GridSimulator::ensureStarted() {
     if (!started_) {
-        controller_.startCleaning();
+        rvc_.startCleaning();
         started_ = true;
     }
 }

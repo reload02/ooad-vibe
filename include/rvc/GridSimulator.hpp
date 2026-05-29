@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rvc/RvcController.hpp"
+#include "rvc/Rvc.hpp"
 
 #include <filesystem>
 #include <optional>
@@ -57,7 +57,7 @@ private:
     std::vector<std::string> grid_;
     Position robot_{};
     Direction direction_{Direction::North};
-    RvcController controller_;
+    Rvc rvc_;
     int dustCleaned_{0};
     bool started_{false};
     std::vector<std::string> logs_;
