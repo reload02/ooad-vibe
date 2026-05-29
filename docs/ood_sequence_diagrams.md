@@ -42,32 +42,42 @@ sequenceDiagram
         Controller->>Fusion: recordFrontObstacleInterrupt()
     end
     Simulator->>RVC: tick(periodicSensors)
+    RVC->>Controller: tick(periodicSensors)
+    Controller->>Fusion: fuse(periodicSensors)
+    Fusion-->>Controller: SensorSnapshot(frontObstacle)
+    Controller->>Fusion: clearFrontObstacleInterrupt()
 ```
 
-## 3. SD-03 Command Application In Simulator
+## 3. SD-03 Escape Right Probe
 
 ```mermaid
 sequenceDiagram
     participant Simulator as GridSimulator
     participant RVC as Rvc
+    participant Navigation as NavigationPolicy
 
-    Simulator->>RVC: tick(periodicSensors)
-    RVC-->>Simulator: Command
-    Simulator->>Simulator: cleanCurrentCell(command)
-    Simulator->>Simulator: applyMotion(command.motion)
-    Simulator->>Simulator: makeLogLine(...)
+    Simulator->>RVC: onFrontObstacleInterrupt()
+    Simulator->>RVC: tick(leftObstacle=true)
+    RVC->>Navigation: decide(frontObstacle=true, leftObstacle=true)
+    Navigation-->>RVC: Backward
+    Simulator->>RVC: tick(leftObstacle=true)
+    RVC->>Navigation: decide(...)
+    Navigation-->>RVC: TurnRight
+    alt right direction clear
+        Simulator->>RVC: tick(no front interrupt)
+        Navigation-->>RVC: Forward
+    else right direction blocked
+        Simulator->>RVC: onFrontObstacleInterrupt()
+        Simulator->>RVC: tick(...)
+        Navigation-->>RVC: TurnLeft
+    end
 ```
 
-## 4. SD-04 Responsibility Boundary
+## 4. Change Notes
 
-```mermaid
-flowchart LR
-    Rvc[Rvc facade] --> Controller[RvcController]
-    Controller --> Fusion[SensorFusion]
-    Controller --> Nav[NavigationPolicy]
-    Controller --> Clean[CleaningPolicy]
-    Controller --> Compose[CommandComposer]
-    Simulator[GridSimulator] -->|owns| Pose[Position and Direction]
-    Simulator -->|owns| Grid[Obstacle and Dust Grid]
-    Rvc -->|does not own| Pose
-```
+| Tag | Item |
+| --- | --- |
+| [삭제] | Control tick에서 right periodic sample을 전달하지 않는다. |
+| [변경] | `SensorSnapshot`에는 `frontObstacle`, `leftObstacle`, `dustDetected`만 포함된다. |
+| [신규] | 우측 probe 결과는 다음 tick의 front interrupt 존재 여부로 판단한다. |
+| [신규] | probe용 `TurnRight`와 복구용 `TurnLeft` 모두 독립 command이며 tick을 소비한다. |

@@ -29,7 +29,6 @@ TEST(RvcControllerTest, IdleControllerReturnsStopAndIgnoresFrontInterrupt) {
     controller.onFrontObstacleInterrupt();
     const Command idleCommand = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = true,
     });
 
@@ -51,14 +50,12 @@ TEST(RvcControllerTest, StopCleaningReturnsStopAndOff) {
     controller.startCleaning();
     (void)controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = true,
     });
 
     controller.stopCleaning();
     const Command command = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = true,
     });
 
@@ -69,14 +66,13 @@ TEST(RvcControllerTest, StopCleaningReturnsStopAndOff) {
     EXPECT_EQ(controller.boostTicksRemaining(), 0);
 }
 
-TEST(RvcControllerTest, FrontInterruptTriggersImmediateAvoidance) {
+TEST(RvcControllerTest, FrontInterruptTurnsLeftWhenLeftSideIsOpen) {
     RvcController controller;
     controller.startCleaning();
     controller.onFrontObstacleInterrupt();
 
     const Command command = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = true,
         .dustDetected = false,
     });
 
@@ -92,12 +88,10 @@ TEST(RvcControllerTest, FrontInterruptIsConsumedAfterOneTick) {
 
     const Command avoid = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = true,
         .dustDetected = false,
     });
     const Command resumed = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = true,
         .dustDetected = false,
     });
 
@@ -108,80 +102,23 @@ TEST(RvcControllerTest, FrontInterruptIsConsumedAfterOneTick) {
     EXPECT_EQ(controller.state(), ControllerState::Cleaning);
 }
 
-TEST(RvcControllerTest, TurnsTowardOpenSide) {
-    RvcController controller;
-    controller.startCleaning();
-    controller.onFrontObstacleInterrupt();
-
-    const Command command = controller.tick(PeriodicSensorData{
-        .leftObstacle = true,
-        .rightObstacle = false,
-        .dustDetected = false,
-    });
-
-    EXPECT_EQ(command.motion, Motion::TurnRight);
-    EXPECT_EQ(command.cleaningPower, CleaningPower::Off);
-    EXPECT_EQ(controller.state(), ControllerState::Avoiding);
-}
-
-TEST(RvcControllerTest, AlternatesWhenBothSidesAreOpen) {
-    RvcController controller;
-    controller.startCleaning();
-
-    controller.onFrontObstacleInterrupt();
-    const Command first = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .rightObstacle = false,
-        .dustDetected = false,
-    });
-
-    controller.onFrontObstacleInterrupt();
-    const Command second = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .rightObstacle = false,
-        .dustDetected = false,
-    });
-
-    EXPECT_EQ(first.motion, Motion::TurnLeft);
-    EXPECT_EQ(second.motion, Motion::TurnRight);
-}
-
-TEST(RvcControllerTest, AlternationPersistsAcrossClearTicks) {
-    RvcController controller;
-    controller.startCleaning();
-
-    controller.onFrontObstacleInterrupt();
-    const Command first = controller.tick(PeriodicSensorData{});
-    const Command clear = controller.tick(PeriodicSensorData{});
-    controller.onFrontObstacleInterrupt();
-    const Command second = controller.tick(PeriodicSensorData{});
-
-    EXPECT_EQ(first.motion, Motion::TurnLeft);
-    EXPECT_EQ(clear.motion, Motion::Forward);
-    EXPECT_EQ(second.motion, Motion::TurnRight);
-}
-
-TEST(RvcControllerTest, AllBlockedEntersEscapingAndKeepsBackingUp) {
+TEST(RvcControllerTest, FrontInterruptWithBlockedLeftEntersEscaping) {
     RvcController controller;
     controller.startCleaning();
     controller.onFrontObstacleInterrupt();
 
     const Command first = controller.tick(PeriodicSensorData{
         .leftObstacle = true,
-        .rightObstacle = true,
         .dustDetected = false,
     });
-
-    controller.onFrontObstacleInterrupt();
     const Command second = controller.tick(PeriodicSensorData{
         .leftObstacle = true,
-        .rightObstacle = true,
         .dustDetected = false,
     });
 
     EXPECT_EQ(first.motion, Motion::Backward);
     EXPECT_EQ(first.cleaningPower, CleaningPower::Off);
-    EXPECT_EQ(second.motion, Motion::Backward);
+    EXPECT_EQ(second.motion, Motion::TurnRight);
     EXPECT_EQ(second.cleaningPower, CleaningPower::Off);
     EXPECT_EQ(controller.state(), ControllerState::Escaping);
 }
@@ -193,109 +130,106 @@ TEST(RvcControllerTest, AllBlockedWithDustKeepsCleanerOffButPreservesBoostBudget
 
     const Command blocked = controller.tick(PeriodicSensorData{
         .leftObstacle = true,
-        .rightObstacle = true,
         .dustDetected = true,
     });
     const int remainingAfterBlockedDust = controller.boostTicksRemaining();
-    const Command resumed = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .rightObstacle = false,
+    const Command probeTurn = controller.tick(PeriodicSensorData{
+        .leftObstacle = true,
         .dustDetected = false,
     });
 
     EXPECT_EQ(blocked.motion, Motion::Backward);
     EXPECT_EQ(blocked.cleaningPower, CleaningPower::Off);
-    EXPECT_EQ(controller.state(), ControllerState::Avoiding);
+    EXPECT_EQ(probeTurn.motion, Motion::TurnRight);
+    EXPECT_EQ(probeTurn.cleaningPower, CleaningPower::Off);
+    EXPECT_EQ(controller.state(), ControllerState::Escaping);
     EXPECT_EQ(remainingAfterBlockedDust, 3);
     EXPECT_EQ(controller.boostTicksRemaining(), 2);
-    EXPECT_EQ(resumed.motion, Motion::TurnLeft);
-    EXPECT_EQ(resumed.cleaningPower, CleaningPower::Off);
 }
 
-TEST(RvcControllerTest, EscapingIgnoresOpenFrontUntilSideOpens) {
+TEST(RvcControllerTest, EscapingTurnsLeftImmediatelyWhenLeftSideOpens) {
     RvcController controller;
     controller.startCleaning();
     controller.onFrontObstacleInterrupt();
 
     (void)controller.tick(PeriodicSensorData{
         .leftObstacle = true,
-        .rightObstacle = true,
         .dustDetected = false,
     });
-
-    const Command stillEscaping = controller.tick(PeriodicSensorData{
+    (void)controller.tick(PeriodicSensorData{
         .leftObstacle = true,
-        .rightObstacle = true,
         .dustDetected = false,
     });
 
-    EXPECT_EQ(stillEscaping.motion, Motion::Backward);
-    EXPECT_EQ(stillEscaping.cleaningPower, CleaningPower::Off);
-    EXPECT_EQ(controller.state(), ControllerState::Escaping);
-
+    controller.onFrontObstacleInterrupt();
+    const Command restoreHeading = controller.tick(PeriodicSensorData{
+        .leftObstacle = true,
+        .dustDetected = false,
+    });
     const Command sideExit = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = true,
         .dustDetected = false,
     });
 
+    EXPECT_EQ(restoreHeading.motion, Motion::TurnLeft);
     EXPECT_EQ(sideExit.motion, Motion::TurnLeft);
     EXPECT_EQ(sideExit.cleaningPower, CleaningPower::Off);
     EXPECT_EQ(controller.state(), ControllerState::Avoiding);
 }
 
-TEST(RvcControllerTest, EscapingTurnsTowardRightSideExit) {
+TEST(RvcControllerTest, EscapingUsesFrontInterruptAbsenceForRightSideExit) {
     RvcController controller;
     controller.startCleaning();
     controller.onFrontObstacleInterrupt();
 
-    (void)controller.tick(PeriodicSensorData{
+    const Command backUp = controller.tick(PeriodicSensorData{
         .leftObstacle = true,
-        .rightObstacle = true,
+        .dustDetected = false,
+    });
+    const Command turnRight = controller.tick(PeriodicSensorData{
+        .leftObstacle = true,
+        .dustDetected = false,
+    });
+    const Command rightExit = controller.tick(PeriodicSensorData{
+        .leftObstacle = true,
         .dustDetected = false,
     });
 
-    const Command sideExit = controller.tick(PeriodicSensorData{
-        .leftObstacle = true,
-        .rightObstacle = false,
-        .dustDetected = false,
-    });
-
-    EXPECT_EQ(sideExit.motion, Motion::TurnRight);
-    EXPECT_EQ(sideExit.cleaningPower, CleaningPower::Off);
-    EXPECT_EQ(controller.state(), ControllerState::Avoiding);
+    EXPECT_EQ(backUp.motion, Motion::Backward);
+    EXPECT_EQ(turnRight.motion, Motion::TurnRight);
+    EXPECT_EQ(rightExit.motion, Motion::Forward);
+    EXPECT_EQ(rightExit.cleaningPower, CleaningPower::Normal);
+    EXPECT_EQ(controller.state(), ControllerState::Cleaning);
 }
 
-TEST(RvcControllerTest, EscapingUsesAlternationWhenBothSidesOpen) {
+TEST(RvcControllerTest, EscapingRestoresHeadingWhenRightProbeInterrupts) {
     RvcController controller;
     controller.startCleaning();
     controller.onFrontObstacleInterrupt();
 
-    (void)controller.tick(PeriodicSensorData{
+    const Command backUp = controller.tick(PeriodicSensorData{
         .leftObstacle = true,
-        .rightObstacle = true,
         .dustDetected = false,
     });
-    const Command firstExit = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .rightObstacle = false,
+    const Command turnRight = controller.tick(PeriodicSensorData{
+        .leftObstacle = true,
         .dustDetected = false,
     });
-
     controller.onFrontObstacleInterrupt();
-    (void)controller.tick(PeriodicSensorData{
+    const Command restoreHeading = controller.tick(PeriodicSensorData{
         .leftObstacle = true,
-        .rightObstacle = true,
         .dustDetected = false,
     });
-    const Command secondExit = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .rightObstacle = false,
+    const Command backUpAgain = controller.tick(PeriodicSensorData{
+        .leftObstacle = true,
         .dustDetected = false,
     });
 
-    EXPECT_EQ(firstExit.motion, Motion::TurnLeft);
-    EXPECT_EQ(secondExit.motion, Motion::TurnRight);
+    EXPECT_EQ(backUp.motion, Motion::Backward);
+    EXPECT_EQ(turnRight.motion, Motion::TurnRight);
+    EXPECT_EQ(restoreHeading.motion, Motion::TurnLeft);
+    EXPECT_EQ(backUpAgain.motion, Motion::Backward);
+    EXPECT_EQ(controller.state(), ControllerState::Escaping);
 }
 
 TEST(RvcControllerTest, DustBoostLastsConfiguredTicks) {
@@ -304,7 +238,6 @@ TEST(RvcControllerTest, DustBoostLastsConfiguredTicks) {
 
     const Command dustTick = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = true,
     });
     const Command boostTick2 = controller.tick(PeriodicSensorData{});
@@ -323,18 +256,15 @@ TEST(RvcControllerTest, DustDetectionRefreshesBoostBudget) {
 
     const Command firstDust = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = true,
     });
     const Command agingBoost = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = false,
     });
     const int agedRemaining = controller.boostTicksRemaining();
     const Command refreshedDust = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = true,
     });
     const int refreshedRemaining = controller.boostTicksRemaining();
@@ -352,7 +282,6 @@ TEST(RvcControllerTest, ZeroTickBoostConfigurationDoesNotBoostOnDust) {
 
     const Command command = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = true,
     });
 
@@ -367,19 +296,16 @@ TEST(RvcControllerTest, AvoidanceOutputStaysOffWhileBoostStateIsMaintained) {
 
     const Command dustTick = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = true,
     });
 
     controller.onFrontObstacleInterrupt();
     const Command avoidTick = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = true,
         .dustDetected = false,
     });
     const Command resumedTick = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = false,
         .dustDetected = false,
     });
 

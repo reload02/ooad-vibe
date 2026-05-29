@@ -36,10 +36,14 @@ public:
     [[nodiscard]] ControllerState state() const;
 
 private:
-    [[nodiscard]] Motion chooseOpenSideTurn(bool leftObstacle, bool rightObstacle);
+    enum class EscapeProbePhase {
+        BackingUp,
+        TurningRight,
+        EvaluatingRightProbe,
+    };
 
     ControllerState state_{ControllerState::Idle};
-    bool preferLeftTurn_{true};
+    EscapeProbePhase escapeProbePhase_{EscapeProbePhase::BackingUp};
 };
 
 class CleaningPolicy {

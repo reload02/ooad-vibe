@@ -75,7 +75,7 @@ std::string scenarioName(const ::testing::TestParamInfo<ScenarioExpectation>& in
 TEST(RvcSystemTest, SimulatorCleansDustAndLogsCommands) {
     GridSimulator simulator = GridSimulator::fromLines({
         "#####",
-        "#^*.#",
+        "#>*.#",
         "#...#",
         "#####",
     });
@@ -104,7 +104,7 @@ TEST(RvcSystemTest, SimulatorUsesBackwardEscape) {
     EXPECT_EQ(result.finalDirection, Direction::North);
 }
 
-TEST(RvcSystemTest, SimulatorKeepsCommandingBackwardWhenBoxedIn) {
+TEST(RvcSystemTest, SimulatorCyclesBackwardRightProbeAndRestoreWhenBoxedIn) {
     GridSimulator simulator = GridSimulator::fromLines({
         "#####",
         "#####",
@@ -118,9 +118,11 @@ TEST(RvcSystemTest, SimulatorKeepsCommandingBackwardWhenBoxedIn) {
         return line.find("motion=Backward") != std::string::npos;
     }));
 
-    EXPECT_EQ(backwardCommands, 5);
+    EXPECT_EQ(backwardCommands, 2);
+    EXPECT_TRUE(containsLog(result.logs, "motion=TurnRight cleaner=Off"));
+    EXPECT_TRUE(containsLog(result.logs, "motion=TurnLeft cleaner=Off"));
     EXPECT_EQ(result.finalPosition, (Position{2, 2}));
-    EXPECT_EQ(result.finalDirection, Direction::North);
+    EXPECT_EQ(result.finalDirection, Direction::East);
 }
 
 TEST(RvcSystemTest, SimulatorKeepsBackingUpUntilSideExitOpens) {
@@ -138,14 +140,14 @@ TEST(RvcSystemTest, SimulatorKeepsBackingUpUntilSideExitOpens) {
         return line.find("motion=Backward") != std::string::npos;
     }));
 
-    EXPECT_EQ(backwardCommands, 2);
+    EXPECT_EQ(backwardCommands, 1);
     EXPECT_TRUE(containsLog(result.logs, "tick=2 frontInterrupt=false"));
-    EXPECT_TRUE(containsLog(result.logs, "tick=2 frontInterrupt=false leftPeriodic=blocked rightPeriodic=blocked"));
-    EXPECT_TRUE(containsLog(result.logs, "tick=3 frontInterrupt=false leftPeriodic=blocked rightPeriodic=open"));
+    EXPECT_TRUE(containsLog(result.logs, "tick=2 frontInterrupt=false leftPeriodic=blocked"));
     EXPECT_TRUE(containsLog(result.logs, "motion=TurnRight"));
     EXPECT_TRUE(containsLog(result.logs, "motion=TurnRight cleaner=Off"));
-    EXPECT_EQ(result.finalPosition, (Position{4, 2}));
-    EXPECT_EQ(result.finalDirection, Direction::East);
+    EXPECT_TRUE(containsLog(result.logs, "motion=TurnLeft cleaner=Off"));
+    EXPECT_EQ(result.finalPosition, (Position{3, 2}));
+    EXPECT_EQ(result.finalDirection, Direction::North);
 }
 
 TEST(RvcSystemTest, SimulatorKeepsCleanerOffDuringBoostedEscape) {
@@ -164,11 +166,11 @@ TEST(RvcSystemTest, SimulatorKeepsCleanerOffDuringBoostedEscape) {
     EXPECT_TRUE(containsLog(result.logs, "motion=TurnRight cleaner=Off"));
 }
 
-TEST(RvcSystemTest, SimulatorTurnsAfterFrontInterrupt) {
+TEST(RvcSystemTest, SimulatorTurnsLeftAfterFrontInterruptWhenLeftIsOpen) {
     GridSimulator simulator = GridSimulator::fromLines({
         "#####",
-        "#.#.#",
-        "##^.#",
+        "#####",
+        "#.^.#",
         "#...#",
         "#####",
     });
@@ -176,8 +178,8 @@ TEST(RvcSystemTest, SimulatorTurnsAfterFrontInterrupt) {
     const rvc::SimulationResult result = simulator.run(1, false);
 
     EXPECT_TRUE(containsLog(result.logs, "frontInterrupt=true"));
-    EXPECT_TRUE(containsLog(result.logs, "motion=TurnRight"));
-    EXPECT_EQ(result.finalDirection, Direction::East);
+    EXPECT_TRUE(containsLog(result.logs, "motion=TurnLeft"));
+    EXPECT_EQ(result.finalDirection, Direction::West);
 }
 
 TEST(RvcSystemTest, SimulatorRunWithZeroTicksLeavesRobotAtInitialPose) {
@@ -296,44 +298,44 @@ INSTANTIATE_TEST_SUITE_P(
     RvcScenarioRegressionTest,
     ::testing::Values(
         ScenarioExpectation{"backward_escape.rvc", 4, Position{3, 2}, Direction::West, 0, 0, 1, 1, 0, 2, 0, 3,
-                            {"escaping: side opened, turn toward exit"}},
-        ScenarioExpectation{"backward_escape2.rvc", 20, Position{6, 2}, Direction::North, 0, 0, 7, 1, 1, 11, 0, 13,
+                            {"escaping: left side opened, turn toward exit"}},
+        ScenarioExpectation{"backward_escape2.rvc", 20, Position{8, 2}, Direction::North, 0, 0, 1, 6, 6, 7, 0, 19,
                             {"motion=TurnRight cleaner=Off"}},
         ScenarioExpectation{"boundary_without_outer_wall.rvc", 4, Position{2, 1}, Direction::East, 0, 0, 2, 2, 0, 0,
                             0, 2, {"frontInterrupt=true"}},
         ScenarioExpectation{"clear_corridor_forward.rvc", 8, Position{1, 9}, Direction::East, 0, 0, 8, 0, 0, 0, 0, 0,
                             {"front clear: forward cleaning"}},
-        ScenarioExpectation{"continuous_backward.rvc", 5, Position{2, 2}, Direction::North, 0, 0, 0, 0, 0, 5, 0, 5,
-                            {"escaping: keep backing up until a side exit opens"}},
-        ScenarioExpectation{"dense_dust_maze_extreme.rvc", 50, Position{3, 5}, Direction::East, 7, 0, 38, 10, 2, 0,
-                            11, 12, {"motion=Forward cleaner=Boost", "motion=TurnLeft cleaner=Off"}},
+        ScenarioExpectation{"continuous_backward.rvc", 5, Position{2, 2}, Direction::East, 0, 0, 0, 1, 2, 2, 0, 5,
+                            {"escaping: right probe blocked, restore heading"}},
+        ScenarioExpectation{"dense_dust_maze_extreme.rvc", 50, Position{1, 1}, Direction::East, 1, 6, 2, 16, 16, 16,
+                            1, 48, {"motion=Forward cleaner=Boost", "motion=TurnLeft cleaner=Off"}},
         ScenarioExpectation{"dust_and_interrupt.rvc", 10, Position{1, 2}, Direction::West, 2, 0, 8, 2, 0, 0, 3, 2,
                             {"dustPeriodic=detected"}},
         ScenarioExpectation{"dust_before_dead_end_escape.rvc", 8, Position{2, 3}, Direction::South, 1, 0, 5, 0, 1, 2,
                             2, 3, {"motion=Backward cleaner=Off"}},
-        ScenarioExpectation{"dust_trail_boost_refresh.rvc", 8, Position{1, 8}, Direction::South, 3, 0, 7, 0, 1, 0,
+        ScenarioExpectation{"dust_trail_boost_refresh.rvc", 8, Position{1, 7}, Direction::East, 3, 0, 7, 0, 0, 1,
                             6, 1, {"motion=Forward cleaner=Boost"}},
-        ScenarioExpectation{"front_both_sides_open.rvc", 3, Position{2, 1}, Direction::North, 0, 0, 1, 1, 1, 0, 0, 2,
-                            {"motion=TurnLeft cleaner=Off", "motion=TurnRight cleaner=Off"}},
+        ScenarioExpectation{"front_both_sides_open.rvc", 3, Position{2, 1}, Direction::South, 0, 0, 1, 2, 0, 0, 0, 2,
+                            {"motion=TurnLeft cleaner=Off"}},
         ScenarioExpectation{"front_clears_but_sides_still_blocked.rvc", 6, Position{2, 2}, Direction::South, 0, 0, 3,
                             2, 0, 1, 0, 3, {"motion=Backward cleaner=Off"}},
         ScenarioExpectation{"front_left_only_open.rvc", 2, Position{2, 1}, Direction::West, 0, 0, 1, 1, 0, 0, 0, 1,
                             {"motion=TurnLeft cleaner=Off"}},
-        ScenarioExpectation{"front_right_only_open.rvc", 2, Position{2, 3}, Direction::East, 0, 0, 1, 0, 1, 0, 0, 1,
-                            {"motion=TurnRight cleaner=Off"}},
-        ScenarioExpectation{"large_open_room_dust_sweep.rvc", 30, Position{5, 1}, Direction::West, 3, 2, 28, 0, 2, 0,
-                            9, 2, {"dustPeriodic=detected"}},
-        ScenarioExpectation{"long_escape_left_exit_extreme.rvc", 9, Position{9, 1}, Direction::West, 0, 0, 1, 1, 0, 7,
-                            0, 8, {"motion=TurnLeft cleaner=Off"}},
-        ScenarioExpectation{"long_escape_right_exit_extreme.rvc", 9, Position{9, 3}, Direction::East, 0, 0, 1, 0, 1,
-                            7, 0, 8, {"motion=TurnRight cleaner=Off"}},
+        ScenarioExpectation{"front_right_only_open.rvc", 2, Position{3, 2}, Direction::West, 0, 0, 0, 1, 0, 1, 0, 2,
+                            {"motion=TurnLeft cleaner=Off"}},
+        ScenarioExpectation{"large_open_room_dust_sweep.rvc", 30, Position{1, 9}, Direction::West, 2, 3, 25, 3, 1, 1,
+                            6, 5, {"dustPeriodic=detected"}},
+        ScenarioExpectation{"long_escape_left_exit_extreme.rvc", 9, Position{5, 2}, Direction::North, 0, 0, 0, 3, 3, 3,
+                            0, 9, {"motion=TurnLeft cleaner=Off"}},
+        ScenarioExpectation{"long_escape_right_exit_extreme.rvc", 9, Position{5, 2}, Direction::North, 0, 0, 0, 3, 3,
+                            3, 0, 9, {"motion=TurnRight cleaner=Off"}},
         ScenarioExpectation{"narrow_tunnel_sides_blocked_front_clear.rvc", 6, Position{1, 5}, Direction::East, 0, 0, 5,
-                            0, 0, 1, 0, 1, {"leftPeriodic=blocked rightPeriodic=blocked dustPeriodic=clear motion=Forward"}},
+                            0, 0, 1, 0, 1, {"leftPeriodic=blocked dustPeriodic=clear motion=Forward"}},
         ScenarioExpectation{"ragged_map_edge_extreme.rvc", 8, Position{0, 0}, Direction::West, 1, 0, 6, 2, 0, 0, 2, 2,
                             {"frontInterrupt=true"}},
         ScenarioExpectation{"repeated_front_interrupts_alternation.rvc", 12, Position{2, 7}, Direction::East, 0, 0, 8,
-                            1, 2, 1, 0, 4, {"motion=TurnLeft cleaner=Off", "motion=TurnRight cleaner=Off"}},
-        ScenarioExpectation{"sealed_box_extreme.rvc", 10, Position{2, 2}, Direction::North, 0, 0, 0, 0, 0, 10, 0, 10,
+                            3, 0, 1, 0, 4, {"motion=TurnLeft cleaner=Off"}},
+        ScenarioExpectation{"sealed_box_extreme.rvc", 10, Position{2, 2}, Direction::North, 0, 0, 0, 3, 3, 4, 0, 10,
                             {"position=(2,2) direction=North"}}),
     scenarioName);
 

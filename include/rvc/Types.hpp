@@ -42,14 +42,12 @@ struct Position {
 
 struct PeriodicSensorData {
     bool leftObstacle{false};
-    bool rightObstacle{false};
     bool dustDetected{false};
 };
 
 struct SensorSnapshot {
     bool frontObstacle{false};
     bool leftObstacle{false};
-    bool rightObstacle{false};
     bool dustDetected{false};
 };
 

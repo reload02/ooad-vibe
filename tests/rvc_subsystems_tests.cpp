@@ -19,26 +19,24 @@ using rvc::Rvc;
 using rvc::SensorFusion;
 using rvc::SensorSnapshot;
 
-TEST(RvcSubsystemTest, SensorFusionCombinesFrontInterruptAndPeriodicInputs) {
+TEST(RvcSubsystemTest, SensorFusionCombinesFrontInterruptAndPeriodicInputsWithoutRightSensor) {
     SensorFusion fusion;
     fusion.recordFrontObstacleInterrupt();
 
     const SensorSnapshot snapshot = fusion.fuse(PeriodicSensorData{
         .leftObstacle = true,
-        .rightObstacle = false,
         .dustDetected = true,
     });
 
     EXPECT_TRUE(snapshot.frontObstacle);
     EXPECT_TRUE(snapshot.leftObstacle);
-    EXPECT_FALSE(snapshot.rightObstacle);
     EXPECT_TRUE(snapshot.dustDetected);
 
     fusion.clearFrontObstacleInterrupt();
     EXPECT_FALSE(fusion.fuse(PeriodicSensorData{}).frontObstacle);
 }
 
-TEST(RvcSubsystemTest, NavigationPolicyChoosesForwardAvoidanceAlternationAndEscape) {
+TEST(RvcSubsystemTest, NavigationPolicyUsesLeftSensorAndFrontInterruptRightProbe) {
     NavigationPolicy navigation;
     navigation.startCleaning();
 
@@ -49,50 +47,63 @@ TEST(RvcSubsystemTest, NavigationPolicyChoosesForwardAvoidanceAlternationAndEsca
     const NavigationDecision left = navigation.decide(SensorSnapshot{
         .frontObstacle = true,
         .leftObstacle = false,
-        .rightObstacle = true,
         .dustDetected = false,
     });
     EXPECT_EQ(left.motion, Motion::TurnLeft);
     EXPECT_EQ(navigation.state(), ControllerState::Avoiding);
 
-    const NavigationDecision firstOpenChoice = navigation.decide(SensorSnapshot{
-        .frontObstacle = true,
-        .leftObstacle = false,
-        .rightObstacle = false,
-        .dustDetected = false,
-    });
-    const NavigationDecision secondOpenChoice = navigation.decide(SensorSnapshot{
-        .frontObstacle = true,
-        .leftObstacle = false,
-        .rightObstacle = false,
-        .dustDetected = false,
-    });
-    EXPECT_EQ(firstOpenChoice.motion, Motion::TurnLeft);
-    EXPECT_EQ(secondOpenChoice.motion, Motion::TurnRight);
-
-    const NavigationDecision blocked = navigation.decide(SensorSnapshot{
+    const NavigationDecision enterEscape = navigation.decide(SensorSnapshot{
         .frontObstacle = true,
         .leftObstacle = true,
-        .rightObstacle = true,
         .dustDetected = false,
     });
-    const NavigationDecision stillBlocked = navigation.decide(SensorSnapshot{
+    const NavigationDecision turnRight = navigation.decide(SensorSnapshot{
         .frontObstacle = false,
         .leftObstacle = true,
-        .rightObstacle = true,
         .dustDetected = false,
     });
-    const NavigationDecision sideExit = navigation.decide(SensorSnapshot{
+    const NavigationDecision rightExit = navigation.decide(SensorSnapshot{
         .frontObstacle = false,
         .leftObstacle = true,
-        .rightObstacle = false,
         .dustDetected = false,
     });
 
-    EXPECT_EQ(blocked.motion, Motion::Backward);
-    EXPECT_EQ(stillBlocked.motion, Motion::Backward);
-    EXPECT_EQ(sideExit.motion, Motion::TurnRight);
-    EXPECT_EQ(navigation.state(), ControllerState::Avoiding);
+    EXPECT_EQ(enterEscape.motion, Motion::Backward);
+    EXPECT_EQ(turnRight.motion, Motion::TurnRight);
+    EXPECT_EQ(rightExit.motion, Motion::Forward);
+    EXPECT_EQ(navigation.state(), ControllerState::Cleaning);
+}
+
+TEST(RvcSubsystemTest, NavigationPolicyRestoresHeadingWhenRightProbeIsBlocked) {
+    NavigationPolicy navigation;
+    navigation.startCleaning();
+
+    const NavigationDecision enterEscape = navigation.decide(SensorSnapshot{
+        .frontObstacle = true,
+        .leftObstacle = true,
+        .dustDetected = false,
+    });
+    const NavigationDecision turnRight = navigation.decide(SensorSnapshot{
+        .frontObstacle = false,
+        .leftObstacle = true,
+        .dustDetected = false,
+    });
+    const NavigationDecision restoreHeading = navigation.decide(SensorSnapshot{
+        .frontObstacle = true,
+        .leftObstacle = true,
+        .dustDetected = false,
+    });
+    const NavigationDecision backUpAgain = navigation.decide(SensorSnapshot{
+        .frontObstacle = false,
+        .leftObstacle = true,
+        .dustDetected = false,
+    });
+
+    EXPECT_EQ(enterEscape.motion, Motion::Backward);
+    EXPECT_EQ(turnRight.motion, Motion::TurnRight);
+    EXPECT_EQ(restoreHeading.motion, Motion::TurnLeft);
+    EXPECT_EQ(backUpAgain.motion, Motion::Backward);
+    EXPECT_EQ(navigation.state(), ControllerState::Escaping);
 }
 
 TEST(RvcSubsystemTest, CleaningPolicyMaintainsBoostBudget) {
@@ -139,7 +150,6 @@ TEST(RvcFacadeTest, FacadeReturnsSameCommandsAsControllerContract) {
     rvc.onFrontObstacleInterrupt();
     const Command avoid = rvc.tick(PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = true,
         .dustDetected = true,
     });
     EXPECT_EQ(avoid.motion, Motion::TurnLeft);

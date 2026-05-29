@@ -207,7 +207,6 @@ GridSimulator::GridSimulator(std::vector<std::string> grid) : grid_(std::move(gr
 PeriodicSensorData GridSimulator::samplePeriodicSensors() const {
     return PeriodicSensorData{
         .leftObstacle = isObstacle(adjacent(robot_, turnLeft(direction_))),
-        .rightObstacle = isObstacle(adjacent(robot_, turnRight(direction_))),
         .dustDetected = hasDust(robot_),
     };
 }
@@ -263,7 +262,6 @@ std::string GridSimulator::makeLogLine(int tick, bool frontObstacle, const Perio
     std::ostringstream output;
     output << "tick=" << tick << " frontInterrupt=" << (frontObstacle ? "true" : "false")
            << " leftPeriodic=" << (sensors.leftObstacle ? "blocked" : "open")
-           << " rightPeriodic=" << (sensors.rightObstacle ? "blocked" : "open")
            << " dustPeriodic=" << (sensors.dustDetected ? "detected" : "clear")
            << " motion=" << toString(command.motion)
            << " cleaner=" << toString(command.cleaningPower)

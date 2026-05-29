@@ -2,14 +2,20 @@
 
 ## 1. Summary
 
-이 설계는 RVC를 실제 로봇 전체 facade로 모델링한다. `Rvc`는 외부 API를 제공하고, 내부 `RvcController`는 감지 결합, 이동 판단, 청소 세기 판단, command 조립을 각각 별도 subsystem에 위임한다. `GridSimulator`는 검증 환경이며 격자 위치와 방향을 계속 소유한다.
+RVC는 `Rvc` facade와 내부 `RvcController`로 구성된다. `RvcController`는 `SensorFusion`, `NavigationPolicy`, `CleaningPolicy`, `CommandComposer`를 조합한다. `GridSimulator`는 검증 환경으로서 위치, 방향, 장애물, 먼지를 소유한다.
+
+| Tag | Design Change |
+| --- | --- |
+| [삭제] | 우측 주기 센서와 `rightPeriodic` 로그는 제거되었다. |
+| [변경] | `PeriodicSensorData`와 `SensorSnapshot`은 우측 장애물 필드를 갖지 않는다. |
+| [신규] | 우측 탈출은 `Backward -> TurnRight -> front interrupt 평가 -> Forward 또는 TurnLeft` 상태 흐름으로 처리한다. |
 
 ## 2. Structural View
 
 ```mermaid
 flowchart LR
     GridSimulator -->|front interrupt| Rvc
-    GridSimulator -->|PeriodicSensorData| Rvc
+    GridSimulator -->|left and dust periodic data| Rvc
     Rvc --> RvcController
     RvcController --> SensorFusion
     RvcController --> NavigationPolicy
@@ -24,26 +30,12 @@ flowchart LR
 
 | Component | Responsibility |
 | --- | --- |
-| `Rvc` | 실제 로봇 전체 facade. 외부 요청을 controller로 전달하고 command를 반환한다. |
-| `RvcController` | RVC 내부 control flow coordinator. running 상태를 관리하고 subsystem 결과를 조합한다. |
-| `SensorFusion` | front interrupt pending 값과 periodic sensor data를 하나의 `SensorSnapshot`으로 만든다. |
-| `NavigationPolicy` | `ControllerState`, 장애물 상태, 좌우 교대 회전 상태를 관리하며 `Motion`과 reason을 결정한다. |
-| `CleaningPolicy` | dust boost tick 예산을 관리하고 `Normal` 또는 `Boost` 후보 세기를 결정한다. |
-| `CommandComposer` | 전진 중에만 cleaner power를 허용하고 나머지 motion에서는 `Off`를 강제한다. |
-| `GridSimulator` | map, robot grid position, grid direction, dust state를 소유한다. sensor 입력을 만들고 command를 적용한다. |
+| `SensorFusion` | [변경] front interrupt pending 값과 `leftObstacle`, `dustDetected`를 하나의 snapshot으로 만든다. |
+| `NavigationPolicy` | [변경] 좌측 회피와 우측 probe escape phase를 관리하며 `Motion`과 reason을 결정한다. |
+| `CommandComposer` | 회전, 후진, 정지 중 cleaner를 `Off`로 강제한다. |
+| `GridSimulator` | [변경] front interrupt, left periodic, dust periodic을 생성하고 command를 적용한다. |
 
-## 3. Interface View
-
-| API | Input | Output | Notes |
-| --- | --- | --- | --- |
-| `Rvc::startCleaning()` | none | none | 자동 청소 상태로 진입한다. |
-| `Rvc::stopCleaning()` | none | none | idle 상태로 돌아가고 boost 예산을 초기화한다. |
-| `Rvc::onFrontObstacleInterrupt()` | none | none | 실행 중일 때만 front interrupt를 pending으로 기록한다. |
-| `Rvc::tick(periodicSensors)` | `PeriodicSensorData` | `Command` | sensor fusion, navigation, cleaning, composition을 한 tick 수행한다. |
-| `RvcController::decideNextCommand(snapshot)` | `SensorSnapshot` | `Command` | 기존 controller test 호환성을 위해 유지한다. |
-| `GridSimulator::step(tick, includeFrame)` | tick, render flag | bool | sensor 값을 계산해 RVC에 전달하고 command를 환경에 적용한다. |
-
-## 4. Runtime Flow
+## 3. Runtime Flow
 
 ```mermaid
 sequenceDiagram
@@ -55,7 +47,7 @@ sequenceDiagram
     participant Clean as CleaningPolicy
     participant Compose as CommandComposer
 
-    Sim->>Sim: front/left/right/dust 상태 계산
+    Sim->>Sim: calculate front/left/dust state
     opt front obstacle
         Sim->>RVC: onFrontObstacleInterrupt()
     end
@@ -64,32 +56,30 @@ sequenceDiagram
     Ctrl->>Fusion: fuse(periodicSensors)
     Fusion-->>Ctrl: SensorSnapshot
     Ctrl->>Clean: update(snapshot.dustDetected)
-    Clean-->>Ctrl: CleaningPower 후보
     Ctrl->>Nav: decide(snapshot)
     Nav-->>Ctrl: NavigationDecision
     Ctrl->>Compose: compose(motion, power, reason)
     Compose-->>Ctrl: Command
     Ctrl-->>RVC: Command
     RVC-->>Sim: Command
-    Sim->>Sim: grid 위치/방향/먼지 상태에 적용
+    Sim->>Sim: apply motion/cleaner/pose/dust
 ```
 
-## 5. Design Rationale And SOLID
+## 4. Escape Probe Flow
 
-| Principle | Design Application |
-| --- | --- |
-| SRP | sensor fusion, navigation, cleaning policy, command composition이 각각 하나의 변경 이유를 가진다. |
-| OCP | 새 sensor 결합 방식, 이동 정책, 청소 정책은 해당 subsystem 교체 또는 확장으로 다룬다. |
-| LSP | simulator와 실제 actuator는 `Command` 계약을 기준으로 대체 가능하다. |
-| ISP | `Rvc` facade는 start, stop, interrupt, tick만 노출한다. |
-| DIP | RVC 내부 제어는 simulator 구체 타입이 아니라 `PeriodicSensorData`, `SensorSnapshot`, `Command` 같은 추상 값에 의존한다. |
+| Step | Tick Command | Meaning |
+| --- | --- | --- |
+| [변경] 1 | `Backward` | 전방 interrupt와 좌측 막힘으로 `Escaping`에 들어가 먼저 후진한다. |
+| [신규] 2 | `TurnRight` | 우측 탈출구를 전방 센서로 확인하기 위해 실제로 우회전한다. |
+| [신규] 3a | `Forward` | 우회전 후 다음 tick에 front interrupt가 없으면 우측이 열린 것으로 판단한다. |
+| [신규] 3b | `TurnLeft` | 우회전 후 다음 tick에 front interrupt가 있으면 우측이 막힌 것으로 판단하고 원래 방향으로 복구한다. |
+| [신규] 4 | repeat | 복구 후에는 다시 후진부터 반복한다. |
 
-## 6. Verification
+## 5. Verification
 
 | Test Group | Coverage |
 | --- | --- |
-| Controller tests | 기존 public controller 계약과 command 결과 회귀 검증 |
-| Subsystem tests | `SensorFusion`, `NavigationPolicy`, `CleaningPolicy`, `CommandComposer` 단위 검증 |
-| Facade tests | `Rvc`가 기존 controller 계약과 같은 최종 command를 반환하는지 검증 |
-| System tests | `GridSimulator`가 위치/방향을 계속 소유하고 command 적용 결과가 기존과 같은지 검증 |
-| CLI tests | 기존 CLI 옵션, scenario 실행, 로그 출력 회귀 검증 |
+| Controller tests | [변경] 우측 센서 없는 public controller 계약, front interrupt 기반 right probe, cleaner off 규칙 |
+| Subsystem tests | [변경] `SensorFusion`, `NavigationPolicy`, `CleaningPolicy`, `CommandComposer` 단위 검증 |
+| System tests | [변경] `GridSimulator` 로그에서 `rightPeriodic` 제거와 tick 단위 회전/후진 적용 검증 |
+| CLI tests | 기존 simulator CLI 실행 호환성 검증 |

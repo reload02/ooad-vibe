@@ -16,7 +16,6 @@ SensorSnapshot SensorFusion::fuse(const PeriodicSensorData& periodicSensors) con
     return SensorSnapshot{
         .frontObstacle = frontInterruptPending_,
         .leftObstacle = periodicSensors.leftObstacle,
-        .rightObstacle = periodicSensors.rightObstacle,
         .dustDetected = periodicSensors.dustDetected,
     };
 }
@@ -27,74 +26,85 @@ bool SensorFusion::frontInterruptPending() const {
 
 void NavigationPolicy::startCleaning() {
     state_ = ControllerState::Cleaning;
+    escapeProbePhase_ = EscapeProbePhase::BackingUp;
 }
 
 void NavigationPolicy::stopCleaning() {
     state_ = ControllerState::Idle;
+    escapeProbePhase_ = EscapeProbePhase::BackingUp;
 }
 
 NavigationDecision NavigationPolicy::decide(const SensorSnapshot& snapshot) {
-    const bool sidesBlocked = snapshot.leftObstacle && snapshot.rightObstacle;
-    const bool allBlocked = snapshot.frontObstacle && sidesBlocked;
-
     if (state_ == ControllerState::Escaping) {
-        if (sidesBlocked) {
+        if (escapeProbePhase_ == EscapeProbePhase::EvaluatingRightProbe) {
+            if (!snapshot.frontObstacle) {
+                state_ = ControllerState::Cleaning;
+                escapeProbePhase_ = EscapeProbePhase::BackingUp;
+                return NavigationDecision{
+                    .motion = Motion::Forward,
+                    .reason = "escaping: right probe clear, move into exit",
+                };
+            }
+
+            escapeProbePhase_ = EscapeProbePhase::BackingUp;
             return NavigationDecision{
-                .motion = Motion::Backward,
-                .reason = "escaping: keep backing up until a side exit opens",
+                .motion = Motion::TurnLeft,
+                .reason = "escaping: right probe blocked, restore heading",
             };
         }
 
-        state_ = ControllerState::Avoiding;
+        if (!snapshot.leftObstacle) {
+            state_ = ControllerState::Avoiding;
+            escapeProbePhase_ = EscapeProbePhase::BackingUp;
+            return NavigationDecision{
+                .motion = Motion::TurnLeft,
+                .reason = "escaping: left side opened, turn toward exit",
+            };
+        }
+
+        if (escapeProbePhase_ == EscapeProbePhase::TurningRight) {
+            escapeProbePhase_ = EscapeProbePhase::EvaluatingRightProbe;
+            return NavigationDecision{
+                .motion = Motion::TurnRight,
+                .reason = "escaping: turn right to probe exit with front interrupt",
+            };
+        }
+
+        escapeProbePhase_ = EscapeProbePhase::TurningRight;
         return NavigationDecision{
-            .motion = chooseOpenSideTurn(snapshot.leftObstacle, snapshot.rightObstacle),
-            .reason = "escaping: side opened, turn toward exit",
+            .motion = Motion::Backward,
+            .reason = "escaping: back up before probing right with front interrupt",
         };
     }
 
     if (!snapshot.frontObstacle) {
         state_ = ControllerState::Cleaning;
+        escapeProbePhase_ = EscapeProbePhase::BackingUp;
         return NavigationDecision{
             .motion = Motion::Forward,
             .reason = "front clear: forward cleaning",
         };
     }
 
-    if (allBlocked) {
-        state_ = ControllerState::Escaping;
+    if (!snapshot.leftObstacle) {
+        state_ = ControllerState::Avoiding;
+        escapeProbePhase_ = EscapeProbePhase::BackingUp;
         return NavigationDecision{
-            .motion = Motion::Backward,
-            .reason = "front interrupt and both sides blocked: enter escaping",
+            .motion = Motion::TurnLeft,
+            .reason = "front interrupt: left side open, turn left",
         };
     }
 
-    state_ = ControllerState::Avoiding;
+    state_ = ControllerState::Escaping;
+    escapeProbePhase_ = EscapeProbePhase::TurningRight;
     return NavigationDecision{
-        .motion = chooseOpenSideTurn(snapshot.leftObstacle, snapshot.rightObstacle),
-        .reason = "front interrupt: stop forward motion and turn",
+        .motion = Motion::Backward,
+        .reason = "front interrupt and left side blocked: enter escaping",
     };
 }
 
 ControllerState NavigationPolicy::state() const {
     return state_;
-}
-
-Motion NavigationPolicy::chooseOpenSideTurn(bool leftObstacle, bool rightObstacle) {
-    if (!leftObstacle && rightObstacle) {
-        return Motion::TurnLeft;
-    }
-
-    if (leftObstacle && !rightObstacle) {
-        return Motion::TurnRight;
-    }
-
-    if (!leftObstacle && !rightObstacle) {
-        const Motion selected = preferLeftTurn_ ? Motion::TurnLeft : Motion::TurnRight;
-        preferLeftTurn_ = !preferLeftTurn_;
-        return selected;
-    }
-
-    return Motion::Backward;
 }
 
 CleaningPolicy::CleaningPolicy(ControllerConfig config) : config_(config) {}

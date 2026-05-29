@@ -8,6 +8,7 @@ classDiagram
         +startCleaning()
         +stopCleaning()
         +tick()
+        +onFrontObstacleInterrupt()
     }
 
     class SensorFusion {
@@ -39,6 +40,8 @@ classDiagram
 
     class Environment
     class FrontSensor
+    class LeftSensor
+    class DustSensor
     class PeriodicSensorData
     class SensorSnapshot
     class Command
@@ -51,7 +54,9 @@ classDiagram
     RvcController *-- CleaningPolicy
     RvcController *-- CommandComposer
     FrontSensor --> SensorFusion : interrupt
-    Environment --> PeriodicSensorData : left/right/dust samples
+    LeftSensor --> PeriodicSensorData : left sample
+    DustSensor --> PeriodicSensorData : dust sample
+    Environment --> PeriodicSensorData : periodic samples
     SensorFusion --> SensorSnapshot
     NavigationPolicy --> Command : motion intent
     CleaningPolicy --> Command : cleaning power candidate
@@ -60,24 +65,24 @@ classDiagram
     Command --> Cleaner : cleaning power request
     GridSimulator --> Environment : owns grid state
     GridSimulator --> RVC : provides sensed inputs
-    GridSimulator --> Command : applies result to grid pose/dust
+    GridSimulator --> Command : applies result
 ```
 
 ## 2. Domain Responsibilities
 
 | Concept | Responsibility |
 | --- | --- |
-| `RVC` | 실제 로봇 전체를 나타내는 facade이다. 외부에서 들어온 감지 입력을 내부 제어 흐름으로 전달하고 최종 `Command`를 반환한다. |
-| `RvcController` | RVC 내부 제어 흐름을 조율한다. 직접 센서 결합, 이동 판단, 청소 세기 판단을 모두 구현하지 않고 subsystem에 위임한다. |
-| `SensorFusion` | 전방 interrupt와 주기 센서 값을 하나의 `SensorSnapshot`으로 정규화한다. |
-| `NavigationPolicy` | 현재 제어 상태와 sensor snapshot을 바탕으로 이동 의도인 `Motion`을 결정한다. |
+| `RVC` | 실제 로봇 전체를 대표하는 facade이며 sensor 입력을 내부 제어 흐름으로 전달하고 최종 `Command`를 반환한다. |
+| `SensorFusion` | [변경] front interrupt와 left/dust periodic 값을 `SensorSnapshot`으로 정규화한다. |
+| `NavigationPolicy` | [변경] 좌측 회피, 후진, 우측 probe, 원복 회전을 포함한 이동 의도를 결정한다. |
 | `CleaningPolicy` | 먼지 감지와 boost tick 예산을 바탕으로 청소 세기 후보를 결정한다. |
-| `CommandComposer` | 이동 의도와 청소 세기 후보를 actuator 요청인 `Command`로 조립한다. 전진 외 동작에서는 cleaner를 `Off`로 강제한다. |
-| `GridSimulator` | 검증용 환경이다. 격자 map, 로봇의 격자상 위치와 방향, 먼지 상태를 소유하고 RVC가 반환한 command를 환경에 적용한다. |
-| `Motor`, `Cleaner`, `Sensor` | 실제 로봇의 하드웨어 역할이다. 현재 구현에서는 concrete hardware driver 대신 `Command`와 simulator 적용으로 추상화한다. |
+| `CommandComposer` | 전진 외 motion에서는 cleaner를 `Off`로 강제한다. |
+| `GridSimulator` | [변경] 우측 주기 센서 없이 front interrupt와 left/dust periodic 입력을 생성한다. |
 
-## 3. Boundary
+## 3. 변경 이력
 
-- RVC는 실제 로봇 전체의 제어 facade이지만, simulator 전용 좌표인 `Position`과 격자 기준 `Direction`은 소유하지 않는다.
-- 위치와 방향은 `GridSimulator`가 검증 환경 상태로 보관한다.
-- RVC 내부 SOLID 적용 단위는 `SensorFusion`, `NavigationPolicy`, `CleaningPolicy`, `CommandComposer`이다.
+| Tag | Item |
+| --- | --- |
+| [삭제] | Right Sensor domain actor와 right periodic sample 관계를 제거했다. |
+| [변경] | `Environment --> PeriodicSensorData` 관계는 left/dust periodic sample만 의미한다. |
+| [신규] | 우측 방향 검사는 Sensor actor가 아니라 `NavigationPolicy`의 회전 probe 흐름으로 모델링한다. |
