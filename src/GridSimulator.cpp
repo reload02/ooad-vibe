@@ -135,7 +135,6 @@ std::string GridSimulator::makeLogLine(int tick, bool frontObstacle, const Perio
     std::ostringstream output;
     output << "tick=" << tick << " frontInterrupt=" << (frontObstacle ? "true" : "false")
            << " leftPeriodic=" << (sensors.leftObstacle ? "blocked" : "open")
-           << " rightPeriodic=" << (sensors.rightObstacle ? "blocked" : "open")
            << " dustPeriodic=" << (sensors.dustDetected ? "detected" : "clear")
            << " motion=" << toString(command.motion)
            << " cleaner=" << toString(command.cleaningPower)

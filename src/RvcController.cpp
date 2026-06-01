@@ -9,12 +9,14 @@ RvcController::RvcController(ControllerConfig config) : config_(config) {}
 void RvcController::startCleaning() {
     running_ = true;
     state_ = ControllerState::Cleaning;
+    rightProbe_ = RightProbeState::None;
     frontInterruptPending_ = false;
 }
 
 void RvcController::stopCleaning() {
     running_ = false;
     state_ = ControllerState::Idle;
+    rightProbe_ = RightProbeState::None;
     frontInterruptPending_ = false;
     boostTicksRemaining_ = 0;
 }
@@ -40,7 +42,7 @@ SensorSnapshot RvcController::readPeriodicSensors(const PeriodicSensorData& peri
     return SensorSnapshot{
         .frontObstacle = frontInterruptPending_,
         .leftObstacle = periodicSensors.leftObstacle,
-        .rightObstacle = periodicSensors.rightObstacle,
+        .rightProbe = rightProbe_,
         .dustDetected = periodicSensors.dustDetected,
     };
 }
@@ -51,36 +53,60 @@ Command RvcController::decideNextCommand(const SensorSnapshot& snapshot) {
     }
 
     const CleaningPower power = updateCleaningPower(snapshot.dustDetected);
-    const bool sidesBlocked = snapshot.leftObstacle && snapshot.rightObstacle;
-    const bool allBlocked = snapshot.frontObstacle && sidesBlocked;
 
-    if (state_ == ControllerState::Escaping) {
-        if (sidesBlocked) {
-            return makeCommand(Motion::Backward, power, "escaping: keep backing up until a side exit opens");
+    if (state_ == ControllerState::RightProbing) {
+        if (snapshot.frontObstacle) {
+            state_ = ControllerState::EscapeAligning;
+            rightProbe_ = RightProbeState::Blocked;
+            return makeCommand(Motion::TurnLeft, power, "right probe blocked: restore original heading");
         }
 
-        state_ = ControllerState::Avoiding;
-        return makeCommand(chooseOpenSideTurn(snapshot.leftObstacle, snapshot.rightObstacle), power,
-                           "escaping: side opened, turn toward exit");
+        state_ = ControllerState::Cleaning;
+        rightProbe_ = RightProbeState::Open;
+        return makeCommand(Motion::Forward, power, "right probe open: resume forward cleaning");
+    }
+
+    if (state_ == ControllerState::EscapeAligning) {
+        state_ = ControllerState::Escaping;
+        rightProbe_ = RightProbeState::Blocked;
+        return makeCommand(Motion::Backward, power, "right probe blocked: original heading restored, backing up");
+    }
+
+    if (state_ == ControllerState::Escaping) {
+        if (!snapshot.leftObstacle) {
+            state_ = ControllerState::Avoiding;
+            rightProbe_ = RightProbeState::None;
+            return makeCommand(Motion::TurnLeft, power, "escaping: left opened, turn toward exit");
+        }
+
+        state_ = ControllerState::RightProbing;
+        rightProbe_ = RightProbeState::Checking;
+        return makeCommand(Motion::TurnRight, power, "escaping: left blocked, probe right");
     }
 
     if (!snapshot.frontObstacle) {
         state_ = ControllerState::Cleaning;
+        rightProbe_ = RightProbeState::None;
         return makeCommand(Motion::Forward, power, "front clear: forward cleaning");
     }
 
-    if (allBlocked) {
-        state_ = ControllerState::Escaping;
-        return makeCommand(Motion::Backward, power, "front interrupt and both sides blocked: enter escaping");
+    if (!snapshot.leftObstacle) {
+        state_ = ControllerState::Avoiding;
+        rightProbe_ = RightProbeState::None;
+        return makeCommand(Motion::TurnLeft, power, "front interrupt: left open, turn left");
     }
 
-    state_ = ControllerState::Avoiding;
-    return makeCommand(chooseOpenSideTurn(snapshot.leftObstacle, snapshot.rightObstacle), power,
-                       "front interrupt: stop forward motion and turn");
+    state_ = ControllerState::RightProbing;
+    rightProbe_ = RightProbeState::Checking;
+    return makeCommand(Motion::TurnRight, power, "front interrupt: left blocked, probe right");
 }
 
 ControllerState RvcController::state() const {
     return state_;
+}
+
+RightProbeState RvcController::rightProbeState() const {
+    return rightProbe_;
 }
 
 bool RvcController::isRunning() const {
@@ -99,24 +125,6 @@ CleaningPower RvcController::updateCleaningPower(bool dustDetected) {
     }
 
     return boostTicksRemaining_ > 0 ? CleaningPower::Boost : CleaningPower::Normal;
-}
-
-Motion RvcController::chooseOpenSideTurn(bool leftObstacle, bool rightObstacle) {
-    if (!leftObstacle && rightObstacle) {
-        return Motion::TurnLeft;
-    }
-
-    if (leftObstacle && !rightObstacle) {
-        return Motion::TurnRight;
-    }
-
-    if (!leftObstacle && !rightObstacle) {
-        const Motion selected = preferLeftTurn_ ? Motion::TurnLeft : Motion::TurnRight;
-        preferLeftTurn_ = !preferLeftTurn_;
-        return selected;
-    }
-
-    return Motion::Backward;
 }
 
 Command RvcController::makeCommand(Motion motion, CleaningPower power, std::string reason) const {

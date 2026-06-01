@@ -19,7 +19,7 @@
 
 | 목표 | 설명 |
 | --- | --- |
-| 요구사항 충족 | FR-01부터 FR-18까지의 자동 청소, 장애물 회피, 탈출, 먼지 boost, 시뮬레이터 검증 요구사항을 만족한다. |
+| 요구사항 충족 | [R2-변경] FR-01부터 FR-18까지의 자동 청소, 좌측 센서와 우측 탐색 기반 장애물 회피, 탈출, 먼지 boost, 시뮬레이터 검증 요구사항을 만족한다. |
 | 결정적 동작 | 동일한 초기 상태와 동일한 센서 입력 순서에 대해 동일한 명령을 생성한다. |
 | 하드웨어 독립성 | [변경] `RvcController`는 실제 하드웨어나 simulator 구현에 직접 의존하지 않고, `Rvc`는 `RvcHardwareAdapter` 추상 계약을 통해 하드웨어와 연결된다. |
 | 테스트 가능성 | [변경] controller 단위 테스트와 `SimulatedHardwareAdapter` 기반 simulator 시스템 테스트로 핵심 흐름을 검증한다. |
@@ -56,14 +56,16 @@
 | Simulated Hardware Adapter | [추가] `SimulatedHardwareAdapter`로 표현되는 테스트용 하드웨어 adapter 구현 |
 | Simulator | [변경] `GridSimulator`로 구현되는 검증 환경이며 `SimulatedHardwareAdapter`를 통해 테스트용 외부 세계를 제공한다. |
 | Command | [변경] controller가 `Rvc`를 거쳐 hardware adapter에 전달하는 추상 명령 |
-| SensorSnapshot | pending front interrupt와 periodic sensor 값을 결합한 판단 입력 |
-| Escaping | 삼방향이 막힌 상황에서 후진 탈출을 수행하는 controller 상태 |
+| SensorSnapshot | [R2-변경] pending front interrupt, 좌측/먼지 periodic sensor 값, 우측 탐색 결과를 결합한 판단 입력 |
+| Right Probing | [R2-추가] `TurnRight` 후 front sensor로 기존 우측 방향의 장애물 여부를 확인하는 controller 상태 |
+| Escape Aligning | [R2-추가] 우측 탐색 실패 후 `TurnLeft`로 원래 진행 방향을 복구하는 controller 상태 |
+| Escaping | [R2-변경] 원래 진행 방향의 반대쪽으로 후진 탈출을 수행하는 controller 상태 |
 
 ## 4. Design Context
 
 ### 4.1 System Boundary
 
-[변경] RVC Control SW는 `Rvc` 상위 객체를 중심으로 sensor 입력, controller 판단, actuator command 적용을 연결한다. 전방 장애물 interrupt와 periodic sensor 값은 `RvcHardwareAdapter`를 통해 `Rvc`에 전달되고, `Rvc`가 `RvcController` 호출 순서를 조율한다. `RvcController`는 두 입력 흐름을 `SensorSnapshot`으로 결합한 뒤 `Command`를 생성하며, `Rvc`는 이 command를 다시 adapter에 적용한다.
+[변경] RVC Control SW는 `Rvc` 상위 객체를 중심으로 sensor 입력, controller 판단, actuator command 적용을 연결한다. [R2-변경] 전방 장애물 interrupt와 좌측/먼지 periodic sensor 값은 `RvcHardwareAdapter`를 통해 `Rvc`에 전달되고, 우측 장애물 여부는 `TurnRight` 후 전방 센서 interrupt로 탐색한다. `Rvc`가 `RvcController` 호출 순서를 조율하고, `RvcController`는 입력 흐름과 우측 탐색 결과를 `SensorSnapshot`으로 결합한 뒤 `Command`를 생성한다.
 [삭제] ~~RVC Control SW는 sensor 입력을 읽고 actuator 명령을 결정하는 controller 중심 구조이다.~~
 
 ```mermaid
@@ -90,7 +92,8 @@ flowchart LR
 | User | `startCleaning()`과 `stopCleaning()` 요청으로 controller 상태를 전환한다. |
 | Front Sensor | `onFrontObstacleInterrupt()`로 전방 장애물 event를 전달한다. |
 | Left Sensor | `PeriodicSensorData::leftObstacle`로 좌측 장애물 상태를 전달한다. |
-| Right Sensor | `PeriodicSensorData::rightObstacle`로 우측 장애물 상태를 전달한다. |
+| [R2-삭제] ~~Right Sensor~~ | ~~`PeriodicSensorData::rightObstacle`로 우측 장애물 상태를 전달한다.~~ |
+| Right Probing | [R2-추가] `TurnRight` 후 Front Sensor interrupt로 기존 우측 방향 장애물 여부를 전달한다. |
 | Dust Sensor | `PeriodicSensorData::dustDetected`로 먼지 감지 상태를 전달한다. |
 | Digital Clock | `tick()` 호출 주기를 제공한다. |
 | Motor | `Command::motion` 값을 수행한다. |
@@ -104,7 +107,9 @@ flowchart LR
 - C++20과 CMake 기반으로 빌드한다.
 - [변경] `RvcController`는 concrete hardware 및 `GridSimulator` 세부 구현에 의존하지 않는다.
 - [추가] `Rvc`는 concrete simulator가 아니라 `RvcHardwareAdapter` 추상 계약에 의존한다.
-- Front sensor는 interrupt, left/right/dust sensor는 periodic 입력으로 분리한다.
+- [R2-변경] Front sensor는 interrupt, left/dust sensor는 periodic 입력으로 분리한다.
+- [R2-삭제] ~~Right sensor는 periodic 입력으로 분리한다.~~
+- [R2-추가] 우측 장애물 판단은 motor 회전과 front sensor 확인으로 구성된 탐색 절차로 분리한다.
 - 출력은 motor motion과 cleaner power를 포함하는 `Command`로 통일한다.
 - 테스트는 deterministic input sequence를 기반으로 반복 가능해야 한다.
 - 모든 Markdown 문서는 UTF-8로 작성한다.
@@ -169,7 +174,7 @@ classDiagram
         -ControllerState state
         -bool running
         -bool frontInterruptPending
-        -bool preferLeftTurn
+        -RightProbeState rightProbe
         -int boostTicksRemaining
         +startCleaning()
         +stopCleaning()
@@ -185,14 +190,13 @@ classDiagram
 
     class PeriodicSensorData {
         +bool leftObstacle
-        +bool rightObstacle
         +bool dustDetected
     }
 
     class SensorSnapshot {
         +bool frontObstacle
         +bool leftObstacle
-        +bool rightObstacle
+        +RightProbeState rightProbe
         +bool dustDetected
     }
 
@@ -253,6 +257,7 @@ classDiagram
     class Motion
     class CleaningPower
     class ControllerState
+    class RightProbeState
 
     Rvc *-- RvcController
     Rvc *-- RvcHardwareAdapter
@@ -276,8 +281,8 @@ classDiagram
 | `Rvc` | [추가] RVC 상위 시스템 객체로서 `RvcController`와 `RvcHardwareAdapter`를 소유하고 sensor 입력, controller 판단, command 적용 흐름을 조율한다. |
 | `RvcController` | [변경] 하드웨어나 시뮬레이터를 소유하지 않고, sensor snapshot과 핵심 제어 규칙에 따라 command를 결정한다. |
 | `ControllerConfig` | boost duration 같은 제어 정책 값을 제공한다. |
-| `PeriodicSensorData` | 좌측, 우측, 먼지 periodic sensor 값을 전달한다. |
-| `SensorSnapshot` | pending front interrupt와 periodic sensor 값을 결합한 판단 입력이다. |
+| `PeriodicSensorData` | [R2-변경] 좌측, 먼지 periodic sensor 값을 전달한다. [R2-삭제] ~~우측 periodic sensor 값을 전달한다.~~ |
+| `SensorSnapshot` | [R2-변경] pending front interrupt와 좌측/먼지 periodic sensor 값, 우측 탐색 결과를 결합한 판단 입력이다. |
 | `Command` | motor motion과 cleaner power를 함께 표현하는 추상 actuator 명령이다. |
 | `RvcHardwareAdapter` | [추가] 전방 interrupt 확인, periodic sensor 읽기, `Command` 적용을 추상화한다. |
 | `SimulatedHardwareAdapter` | [추가] 격자 지도에서 테스트용 sensor/event를 만들고 `Command`를 격자 상태에 적용한다. |
@@ -302,16 +307,16 @@ classDiagram
 | `RvcController::startCleaning()` | 없음 | 없음 | 자동 청소 실행 상태로 전환하고 전방 interrupt pending 값을 초기화한다. | FR-01, FR-03 |
 | `RvcController::stopCleaning()` | 없음 | 없음 | idle 상태로 전환하고 motor stop/cleaner off 상태가 되도록 내부 실행 상태와 boost timer를 초기화한다. | FR-02 |
 | `RvcController::onFrontObstacleInterrupt()` | 없음 | 없음 | 실행 중일 때 전방 장애물 interrupt를 pending 상태로 기록한다. | FR-04, FR-05 |
-| `RvcController::tick(const PeriodicSensorData&)` | periodic sensor 값 | `Command` | 제어 tick마다 sensor 값을 반영하고 다음 command를 반환한다. | FR-06 to FR-15 |
-| `RvcController::readPeriodicSensors(const PeriodicSensorData&)` | periodic sensor 값 | `SensorSnapshot` | pending front interrupt와 periodic 값을 결합한다. | FR-04, FR-06 |
-| `RvcController::decideNextCommand(const SensorSnapshot&)` | sensor snapshot | `Command` | 상태, 장애물, 먼지 정보를 기반으로 motion과 cleaner power를 결정한다. | FR-07 to FR-15 |
+| `RvcController::tick(const PeriodicSensorData&)` | periodic sensor 값 | `Command` | [R2-변경] 제어 tick마다 좌측/먼지 sensor 값과 우측 탐색 상태를 반영하고 다음 command를 반환한다. | FR-06 to FR-15 |
+| `RvcController::readPeriodicSensors(const PeriodicSensorData&)` | periodic sensor 값 | `SensorSnapshot` | [R2-변경] pending front interrupt, 좌측/먼지 periodic 값, 우측 탐색 결과를 결합한다. | FR-04, FR-06 |
+| `RvcController::decideNextCommand(const SensorSnapshot&)` | sensor snapshot | `Command` | [R2-변경] 상태, 좌측 장애물, 우측 탐색 결과, 먼지 정보를 기반으로 motion과 cleaner power를 결정한다. | FR-07 to FR-15 |
 
 #### 7.2.3 Hardware Adapter Interface
 
 | Operation | Input | Output | 책임 | 관련 요구사항 |
 | --- | --- | --- | --- | --- |
 | `RvcHardwareAdapter::hasFrontObstacleInterrupt()` | 없음 | `bool` | [추가] 전방 장애물 interrupt 발생 여부를 `Rvc`에 제공한다. | FR-04, FR-05 |
-| `RvcHardwareAdapter::readPeriodicSensors()` | 없음 | `PeriodicSensorData` | [추가] 좌측, 우측, 먼지 periodic sensor 값을 한 tick 단위로 제공한다. | FR-06 |
+| `RvcHardwareAdapter::readPeriodicSensors()` | 없음 | `PeriodicSensorData` | [R2-변경] 좌측, 먼지 periodic sensor 값을 한 tick 단위로 제공한다. [R2-삭제] ~~우측 periodic sensor 값을 제공한다.~~ | FR-06 |
 | `RvcHardwareAdapter::applyCommand(const Command&)` | `Command` | 없음 | [추가] controller가 결정한 motor/cleaner command를 실제 하드웨어 또는 시뮬레이션 상태에 적용한다. | FR-03, FR-07 to FR-18 |
 
 #### 7.2.4 Simulator Interface
@@ -345,8 +350,8 @@ rvc_simulator [--ticks N] [--scenario FILE] [--quiet-map]
 | 타입 | 필드/값 | 설명 |
 | --- | --- | --- |
 | `ControllerConfig` | `dustBoostTicks` | 먼지 감지 후 boost를 유지할 tick 수이다. 기본값은 3이다. |
-| `PeriodicSensorData` | `leftObstacle`, `rightObstacle`, `dustDetected` | tick마다 sampling되는 좌측/우측/먼지 sensor 값이다. |
-| `SensorSnapshot` | `frontObstacle`, `leftObstacle`, `rightObstacle`, `dustDetected` | pending front interrupt와 periodic sensor 값을 결합한 판단 입력이다. |
+| `PeriodicSensorData` | [R2-변경] `leftObstacle`, `dustDetected` | tick마다 sampling되는 좌측/먼지 sensor 값이다. [R2-삭제] ~~`rightObstacle`~~ |
+| `SensorSnapshot` | [R2-변경] `frontObstacle`, `leftObstacle`, `rightProbe`, `dustDetected` | pending front interrupt, periodic sensor 값, 우측 탐색 결과를 결합한 판단 입력이다. |
 | `Command` | `motion`, `cleaningPower`, `reason` | [변경] `RvcController`가 생성하고 `Rvc`가 `RvcHardwareAdapter`에 적용하는 추상 명령이다. |
 | `SimulationResult` | `ticksRun`, `dustCleaned`, `finalPosition`, `finalDirection`, `logs` | simulator 실행 결과와 검증 로그이다. |
 | `Position` | `row`, `col` | `SimulatedHardwareAdapter` 격자 내 robot 좌표이다. |
@@ -358,7 +363,8 @@ rvc_simulator [--ticks N] [--scenario FILE] [--quiet-map]
 | `Direction` | `North`, `East`, `South`, `West` | `SimulatedHardwareAdapter`에서 robot이 바라보는 방향이다. |
 | `Motion` | `None`, `Stop`, `Forward`, `Backward`, `TurnLeft`, `TurnRight` | motor에 전달할 추상 이동 명령이다. |
 | `CleaningPower` | `Off`, `Normal`, `Boost` | cleaner 출력 세기이다. |
-| `ControllerState` | `Idle`, `Cleaning`, `Avoiding`, `Escaping` | controller의 현재 제어 상태이다. |
+| `ControllerState` | [R2-변경] `Idle`, `Cleaning`, `Avoiding`, `RightProbing`, `EscapeAligning`, `Escaping` | controller의 현재 제어 상태이다. |
+| `RightProbeState` | [R2-추가] `None`, `Checking`, `Open`, `Blocked` | 우측 탐색 상태와 결과이다. |
 
 #### 7.3.3 Scenario Data
 
@@ -443,7 +449,6 @@ sequenceDiagram
 
     Rvc->>Adapter: readPeriodicSensors()
     Adapter->>Adapter: isObstacle(adjacent(left))
-    Adapter->>Adapter: isObstacle(adjacent(right))
     Adapter->>Adapter: hasDust(robotPosition)
     Adapter-->>Rvc: PeriodicSensorData
 ```
@@ -459,14 +464,18 @@ sequenceDiagram
     Controller->>Controller: decideNextCommand(snapshot)
     alt front open
         Controller-->>Controller: Command(Forward, currentCleanerPower)
-    else left open and right blocked
+    else front blocked and left open
         Controller-->>Controller: Command(TurnLeft, Off)
-    else left blocked and right open
+    else front blocked and left blocked
+        Controller->>Controller: state = RightProbing
         Controller-->>Controller: Command(TurnRight, Off)
-    else left open and right open
-        Controller->>Controller: choose alternating turn direction
-        Controller-->>Controller: Command(TurnLeft or TurnRight, Off)
-    else all front, left, and right blocked
+    else RightProbing and front open
+        Controller->>Controller: rightProbe = Open
+        Controller-->>Controller: Command(Forward, currentCleanerPower)
+    else RightProbing and front blocked
+        Controller->>Controller: state = EscapeAligning
+        Controller-->>Controller: Command(TurnLeft, Off)
+    else EscapeAligning
         Controller->>Controller: state = Escaping
         Controller-->>Controller: Command(Backward, Off)
     end
@@ -484,29 +493,37 @@ sequenceDiagram
     participant Controller as RvcController
 
     Rvc->>Adapter: readPeriodicSensors()
-    Adapter-->>Rvc: allBlockedPeriodicSensors
-    Rvc->>Controller: tick(allBlockedPeriodicSensors)
+    Adapter-->>Rvc: leftBlockedPeriodicSensors
+    Rvc->>Controller: tick(leftBlockedPeriodicSensors)
+    Controller->>Controller: state = RightProbing
+    Controller-->>Rvc: Command(TurnRight)
+    Rvc->>Adapter: applyCommand(TurnRight)
+    Rvc->>Adapter: hasFrontObstacleInterrupt()
+    Adapter-->>Rvc: front blocked after right probe
+    Controller->>Controller: state = EscapeAligning
+    Controller-->>Rvc: Command(TurnLeft)
+    Rvc->>Adapter: applyCommand(TurnLeft)
     Controller->>Controller: enter Escaping
     Controller-->>Rvc: Command(Backward)
     Rvc->>Adapter: applyCommand(Backward)
-    loop while left and right are blocked
+    loop while left is blocked
         Rvc->>Adapter: readPeriodicSensors()
-        Adapter-->>Rvc: sideBlockedPeriodicSensors
-        Rvc->>Controller: tick(sideBlockedPeriodicSensors)
-        Controller-->>Rvc: Command(Backward)
-        Rvc->>Adapter: applyCommand(Backward)
-    end
-    Rvc->>Adapter: readPeriodicSensors()
-    Adapter-->>Rvc: sideExitPeriodicSensors
-    Rvc->>Controller: tick(sideExitPeriodicSensors)
-    alt left is open
-        Controller->>Controller: state = Avoiding
-        Controller-->>Rvc: Command(TurnLeft)
-    else right is open
-        Controller->>Controller: state = Avoiding
+        Adapter-->>Rvc: leftBlockedPeriodicSensors
+        Rvc->>Controller: tick(leftBlockedPeriodicSensors)
         Controller-->>Rvc: Command(TurnRight)
+        Rvc->>Adapter: applyCommand(TurnRight)
+        Rvc->>Adapter: hasFrontObstacleInterrupt()
+        alt right probe open
+            Controller-->>Rvc: Command(Forward)
+        else right probe blocked
+            Controller-->>Rvc: Command(TurnLeft)
+            Rvc->>Adapter: applyCommand(TurnLeft)
+            Controller-->>Rvc: Command(Backward)
+            Rvc->>Adapter: applyCommand(Backward)
+        end
     end
-    Rvc->>Adapter: applyCommand(turn command)
+    Controller-->>Rvc: Command(TurnLeft)
+    Rvc->>Adapter: applyCommand(TurnLeft)
 ```
 
 #### 7.4.6 SD-06 Dust Boost
@@ -559,14 +576,18 @@ stateDiagram-v2
     Idle --> Cleaning: startCleaning()
     Cleaning --> Idle: stopCleaning()
     Avoiding --> Idle: stopCleaning()
+    RightProbing --> Idle: stopCleaning()
+    EscapeAligning --> Idle: stopCleaning()
     Escaping --> Idle: stopCleaning()
     Cleaning --> Cleaning: tick(front open)
-    Cleaning --> Avoiding: front interrupt and side open
-    Cleaning --> Escaping: front, left, right blocked
+    Cleaning --> Avoiding: front interrupt and left open
+    Cleaning --> RightProbing: front interrupt and left blocked
     Avoiding --> Cleaning: next tick front open
-    Avoiding --> Escaping: all directions blocked
-    Escaping --> Escaping: side directions blocked
-    Escaping --> Avoiding: side opened
+    RightProbing --> Cleaning: front clear after right probe
+    RightProbing --> EscapeAligning: front blocked after right probe
+    EscapeAligning --> Escaping: original heading restored
+    Escaping --> RightProbing: after backward and left blocked
+    Escaping --> Avoiding: left opened
 ```
 
 #### 7.5.2 Controller States
@@ -575,8 +596,10 @@ stateDiagram-v2
 | --- | --- | --- |
 | `Idle` | 자동 청소가 실행되지 않는 상태 | `Stop`, `Off` |
 | `Cleaning` | 기본 자동 청소 상태 | 전방 open 시 `Forward` |
-| `Avoiding` | 전방 장애물 interrupt 후 측면 회피를 수행하는 상태 | `TurnLeft` 또는 `TurnRight` |
-| `Escaping` | 삼방향이 모두 막혀 후진 탈출을 수행하는 상태 | `Backward` 반복 |
+| `Avoiding` | 전방 장애물 interrupt 후 좌측 회피를 수행하는 상태 | `TurnLeft` |
+| `RightProbing` | [R2-추가] 기존 우측 방향 확인을 위해 우회전한 상태 | `TurnRight` 후 front interrupt 확인 |
+| `EscapeAligning` | [R2-추가] 우측 탐색 실패 후 원래 진행 방향으로 복구하는 상태 | `TurnLeft` |
+| `Escaping` | [R2-변경] 우측 탐색 실패 후 후진 탈출을 수행하는 상태 | `Backward` 후 필요 시 우측 탐색 반복 |
 
 `onFrontObstacleInterrupt()`는 실행 중일 때만 pending interrupt를 기록한다. idle 상태의 interrupt는 다음 tick 판단에 영향을 주지 않는다.
 
@@ -590,7 +613,7 @@ stateDiagram-v2
 4. [변경] `Rvc::tick()`은 읽은 sensor 값을 `RvcController::tick(periodicSensors)`에 전달하고 `Command`를 받는다.
 5. [추가] `Rvc::tick()`은 반환된 `Command`를 `RvcHardwareAdapter::applyCommand(command)`로 적용한다.
 6. `RvcController` 내부에서 `running_`이 false이면 `Motion::Stop`, `CleaningPower::Off` command를 반환한다.
-7. `readPeriodicSensors()`가 `frontInterruptPending_`와 `PeriodicSensorData`를 결합해 `SensorSnapshot`을 만든다.
+7. [R2-변경] `readPeriodicSensors()`가 `frontInterruptPending_`, 좌측/먼지 `PeriodicSensorData`, 우측 탐색 상태를 결합해 `SensorSnapshot`을 만든다.
 8. `decideNextCommand()`가 snapshot과 현재 state를 기반으로 command를 결정한다.
 9. `RvcController::tick()`은 command 결정 후 `frontInterruptPending_`를 false로 되돌려 interrupt를 소비한다.
 
@@ -599,14 +622,15 @@ stateDiagram-v2
 | 조건 | 상태 변화 | Motion |
 | --- | --- | --- |
 | 전방이 열림 | `Cleaning` | `Forward` |
-| 전방이 막히고 좌측만 열림 | `Avoiding` | `TurnLeft` |
-| 전방이 막히고 우측만 열림 | `Avoiding` | `TurnRight` |
-| 전방이 막히고 좌/우 모두 열림 | `Avoiding` | `TurnLeft`와 `TurnRight`를 번갈아 선택 |
-| 전방, 좌측, 우측 모두 막힘 | `Escaping` | `Backward` |
+| 전방이 막히고 좌측이 열림 | `Avoiding` | `TurnLeft` |
+| 전방이 막히고 좌측이 막힘 | `RightProbing` | `TurnRight` |
+| 우측 탐색 후 전방이 열림 | `Cleaning` | `Forward` |
+| 우측 탐색 후 전방이 막힘 | `EscapeAligning` | `TurnLeft` |
+| 원래 진행 방향 복구 완료 | `Escaping` | `Backward` |
 
 #### 7.6.3 Escape Rule
 
-`Escaping` 상태에서는 좌측과 우측이 모두 막힌 동안 계속 `Backward` command를 반환한다. 좌측 또는 우측 중 하나 이상이 열리면 탈출 가능 상태로 판단한다. 탈출 가능 상태가 되면 `Avoiding`으로 전환해 열린 측면 방향으로 회전한다.
+[R2-변경] `Escaping` 상태에서는 먼저 `Backward` command를 한 번 반환한다. 다음 tick에서 좌측이 열려 있으면 탈출 가능 상태로 판단하고 `Avoiding`으로 전환해 `TurnLeft`를 반환한다. 좌측이 계속 막혀 있으면 `RightProbing`으로 전환해 `TurnRight`로 기존 우측 방향을 전방 센서로 확인한다. 우측 탐색 결과 전방이 열려 있으면 `Forward`로 전진 청소를 재개하고, 전방이 막혀 있으면 `EscapeAligning`에서 `TurnLeft`로 원래 진행 방향을 복구한 뒤 다시 `Backward`를 수행한다.
 
 #### 7.6.4 Dust Boost Rule
 
@@ -632,9 +656,9 @@ stateDiagram-v2
 
 | 테스트 수준 | 대상 | 검증 내용 |
 | --- | --- | --- |
-| Controller unit test | `RvcController` | 전진, 중지, interrupt 회피, 좌/우 회전 선택, 교대 회전, 탈출 유지와 측면 탈출, dust boost duration, 회피 중 cleaner off |
+| Controller unit test | `RvcController` | [R2-변경] 전진, 중지, interrupt 회피, 좌측 회피, 우측 탐색 성공/실패, 원래 방향 복구 후 후진, 탈출 중 우측 탐색 반복, dust boost duration, 회피 중 cleaner off |
 | RVC integration test | [추가] `Rvc`, `RvcHardwareAdapter` | adapter 입력을 읽어 controller에 전달하고 command를 adapter에 적용하는 tick orchestration |
-| Simulator system test | `GridSimulator`, `SimulatedHardwareAdapter` | [변경] 테스트용 adapter가 실제 격자에서 dust 청소, 후진 탈출, boxed-in 반복 후진, 측면 탈출구 확인, boost 중 cleaner off, front interrupt 후 회전을 재현하는지 검증 |
+| Simulator system test | `GridSimulator`, `SimulatedHardwareAdapter` | [R2-변경] 테스트용 adapter가 실제 격자에서 dust 청소, 후진 탈출, 우측 탐색 성공/실패, 원래 방향 복구, boost 중 cleaner off, front interrupt 후 회전을 재현하는지 검증 |
 | CLI CTest | `rvc_simulator` | 기본 실행과 scenario 기반 실행 가능 여부 |
 
 #### 7.8.2 Requirement Traceability
@@ -646,14 +670,14 @@ stateDiagram-v2
 | FR-03 | `decideNextCommand`, `Motion::Forward` | `ControllerMovesForwardWhenPathIsClear` |
 | FR-04 | `onFrontObstacleInterrupt`, `frontInterruptPending_` | `FrontInterruptTriggersImmediateAvoidance`, `SimulatorTurnsAfterFrontInterrupt` |
 | FR-05 | `tick`, `SensorSnapshot::frontObstacle`, 회피 command | `FrontInterruptTriggersImmediateAvoidance`, `SimulatorTurnsAfterFrontInterrupt` |
-| FR-06 | `PeriodicSensorData`, `readPeriodicSensors` | controller unit tests |
-| FR-07 | `chooseOpenSideTurn`, `Motion::TurnLeft` | `FrontInterruptTriggersImmediateAvoidance` |
-| FR-08 | `chooseOpenSideTurn`, `Motion::TurnRight` | `TurnsTowardOpenSide`, `SimulatorTurnsAfterFrontInterrupt` |
-| FR-09 | `preferLeftTurn_`, 좌우 교대 정책 | `AlternatesWhenBothSidesAreOpen` |
-| FR-10 | all-blocked 판단, `ControllerState::Escaping` | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
-| FR-11 | `Escaping` 상태의 `Motion::Backward` 반복 | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorKeepsCommandingBackwardWhenBoxedIn`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
-| FR-12 | 측면 탈출 가능 조건 판단 | `EscapingIgnoresOpenFrontUntilSideOpens`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
-| FR-13 | 탈출 후 측면 회전 | `EscapingIgnoresOpenFrontUntilSideOpens`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
+| FR-06 | [R2-변경] `PeriodicSensorData`, `readPeriodicSensors`에서 좌측/먼지 입력만 사용 | controller unit tests |
+| FR-07 | `Motion::TurnLeft` | `FrontInterruptTriggersImmediateAvoidance` |
+| FR-08 | [R2-변경] `ControllerState::RightProbing`, `Motion::TurnRight` | `RightProbeStartsWhenLeftBlocked`, `SimulatorProbesRightAfterFrontInterrupt` |
+| FR-09 | [R2-삭제] ~~`preferLeftTurn_`, 좌우 교대 정책~~ | ~~`AlternatesWhenBothSidesAreOpen`~~ |
+| FR-10 | [R2-변경] right probing blocked 판단, `ControllerState::EscapeAligning`, `ControllerState::Escaping` | `RightProbeBlockedAlignsBeforeEscaping`, `SimulatorRestoresHeadingBeforeBackward` |
+| FR-11 | [R2-변경] `Escaping` 상태의 `Motion::Backward`와 후진 후 우측 탐색 반복 | `EscapingBacksUpThenReprobesRight`, `SimulatorRepeatsRightProbeAfterBackward` |
+| FR-12 | [R2-변경] 좌측 open 또는 우측 탐색 open 조건 판단 | `EscapingTurnsLeftWhenLeftOpens`, `RightProbeOpenResumesForward` |
+| FR-13 | [R2-변경] 좌측 탈출 회전 또는 우측 탐색 성공 후 전진 | `EscapingTurnsLeftWhenLeftOpens`, `RightProbeOpenResumesForward` |
 | FR-14 | `updateCleaningPower`, `ControllerConfig::dustBoostTicks` | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained`, `SimulatorCleansDustAndLogsCommands`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
 | FR-15 | `boostTicksRemaining_` 감소와 `CleaningPower::Normal` 복귀 | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained` |
 | FR-16 | `GridSimulator::render`, scenario map symbol | `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
@@ -667,10 +691,12 @@ stateDiagram-v2
 | 결정 | 근거 |
 | --- | --- |
 | 전방 장애물은 `onFrontObstacleInterrupt()`로만 controller에 전달한다. | 요구사항에서 front sensor가 interrupt 방식으로 동작해야 하기 때문이다. |
-| 좌/우/먼지 값은 `tick(PeriodicSensorData)` 호출마다 controller에 전달한다. | periodic sensor sampling 요구사항을 controller API에 직접 반영하기 위해서이다. |
-| `readPeriodicSensors()`는 pending front interrupt와 periodic 값을 결합하여 `SensorSnapshot`을 만든다. | 서로 다른 입력 timing을 단일 판단 입력으로 정리하기 위해서이다. |
+| [R2-변경] 좌측/먼지 값은 `tick(PeriodicSensorData)` 호출마다 controller에 전달한다. | 우측 센서 제거 후에도 남은 periodic sensor sampling 요구사항을 controller API에 직접 반영하기 위해서이다. |
+| [R2-삭제] ~~우측 값은 `tick(PeriodicSensorData)` 호출마다 controller에 전달한다.~~ | ~~우측 센서가 제거되어 periodic 입력으로 제공되지 않는다.~~ |
+| [R2-추가] 우측 장애물은 `TurnRight` 후 front interrupt로 확인한다. | 하드웨어에서 우측 센서가 제거되었으므로 기존 우측 방향을 전방 센서의 관측 방향으로 바꿔 재사용하기 위해서이다. |
+| `readPeriodicSensors()`는 pending front interrupt와 periodic 값, 우측 탐색 상태를 결합하여 `SensorSnapshot`을 만든다. | 서로 다른 입력 timing과 탐색 결과를 단일 판단 입력으로 정리하기 위해서이다. |
 | `decideNextCommand()`는 단일 판단 지점으로 둔다. | 회피, 탈출, boost 판단을 단위 테스트하기 쉽게 만들기 위해서이다. |
-| `Escaping` 상태에서 삼방향이 계속 막혀 있으면 반드시 `Backward` command를 반복한다. | FR-11의 탈출 가능 시점까지 후진 유지 요구사항을 직접 만족하기 위해서이다. |
+| [R2-변경] `Escaping` 상태에서 후진 후 좌측이 계속 막혀 있으면 반드시 우측 탐색을 반복한다. | 우측 센서가 없어도 후진 중 기존 우측 출구를 놓치지 않기 위해서이다. |
 | `Rvc`는 `RvcController`와 `RvcHardwareAdapter`를 소유한다. | [추가] 수업 의도에 맞게 RVC 자체를 메인 시스템으로 드러내고 controller와 hardware 경계를 명확히 하기 위해서이다. |
 | `SimulatedHardwareAdapter`는 controller command를 실제 하드웨어 대신 격자 상태에 적용한다. | [변경] 실제 하드웨어 없이도 같은 adapter 계약으로 요구사항을 반복 검증하기 위해서이다. |
 | [삭제] ~~`GridSimulator`는 controller command를 실제 하드웨어 대신 격자 상태에 적용한다.~~ | ~~시뮬레이터가 controller 소유자처럼 보이는 표현을 제거한다.~~ |
@@ -680,7 +706,7 @@ stateDiagram-v2
 | Principle | Application |
 | --- | --- |
 | SRP | [변경] `RvcController`는 제어 결정만 담당하고, `Rvc`는 실행 흐름 조율만 담당하며, `GridSimulator`는 검증 환경 제공만 담당한다. |
-| OCP | sensor 입력은 `PeriodicSensorData`와 interrupt API로 추상화되어 새 sensor 추가 시 controller 확장이 가능하다. |
+| OCP | [R2-변경] sensor 입력은 `PeriodicSensorData`, interrupt API, 우측 탐색 상태로 추상화되어 sensor 변경 시 controller 확장이 가능하다. |
 | LSP | [변경] `SimulatedHardwareAdapter`와 실제 하드웨어 adapter는 같은 `RvcHardwareAdapter` 계약과 `Command` 의미를 따르므로 대체 가능하다. |
 | ISP | controller의 public interface는 시작, 중지, interrupt, tick, 판단에 필요한 작은 operation으로 분리된다. |
 | DIP | [변경] `Rvc`는 concrete hardware가 아니라 `RvcHardwareAdapter`에 의존하고, `RvcController`는 concrete simulator나 hardware에 의존하지 않고 값 객체와 추상 command에만 의존한다. |

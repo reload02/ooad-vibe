@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-이 문서는 RVC Control SW의 OOA 단계 산출물로, 외부 actor와 system 사이의 이벤트 흐름을 System Sequence Diagram으로 정리한다. 전방 센서는 interrupt actor이고, 좌측/우측/먼지 센서는 periodic actor로 모델링한다.
+이 문서는 RVC Control SW의 OOA 단계 산출물로, 외부 actor와 system 사이의 이벤트 흐름을 System Sequence Diagram으로 정리한다. [R2-변경] 전방 센서는 interrupt actor이고, 좌측/먼지 센서는 periodic actor로 모델링한다. [R2-삭제] ~~우측 센서는 periodic actor로 모델링한다.~~ 우측 방향은 RVC가 우측으로 90도 회전한 뒤 전방 센서로 탐색한다.
 
 ## 2. SSD-01 Start Automatic Cleaning
 
@@ -48,7 +48,6 @@ sequenceDiagram
     actor Clock as Digital Clock
     participant System as RVC Control SW
     actor LeftSensor as Left Sensor
-    actor RightSensor as Right Sensor
     actor Motor
     actor Cleaner
 
@@ -56,11 +55,11 @@ sequenceDiagram
     System->>System: mark front interrupt pending
     Clock->>System: tick(periodicSensors)
     LeftSensor-->>System: leftObstacle
-    RightSensor-->>System: rightObstacle
-    alt one side is open
-        System-->>Motor: Command(TurnLeft or TurnRight)
-    else both sides are blocked
-        System-->>Motor: Command(Backward)
+    alt left is open
+        System-->>Motor: Command(TurnLeft)
+    else left is blocked
+        System-->>Motor: Command(TurnRight)
+        FrontSensor-->>System: rightProbe result
     end
 ```
 
@@ -71,12 +70,10 @@ sequenceDiagram
     actor Clock as Digital Clock
     participant System as RVC Control SW
     actor LeftSensor as Left Sensor
-    actor RightSensor as Right Sensor
     actor DustSensor as Dust Sensor
 
     Clock->>System: tick()
     LeftSensor-->>System: leftObstacle
-    RightSensor-->>System: rightObstacle
     DustSensor-->>System: dustDetected
     System->>System: updatePeriodicSensorSnapshot()
 ```
@@ -109,29 +106,28 @@ sequenceDiagram
     actor Clock as Digital Clock
     participant System as RVC Control SW
     actor LeftSensor as Left Sensor
-    actor RightSensor as Right Sensor
     actor Motor
     actor Cleaner
 
     FrontSensor->>System: onFrontObstacleInterrupt()
     Clock->>System: tick()
     LeftSensor-->>System: leftObstacle = true
-    RightSensor-->>System: rightObstacle = true
+    System-->>Motor: Command(TurnRight)
+    FrontSensor->>System: onFrontObstacleInterrupt()
+    System-->>Motor: Command(TurnLeft)
     System->>Cleaner: turnOff()
     System->>System: enterEscaping()
-    loop while front, left, and right are blocked
+    loop while left is blocked
         System-->>Motor: Command(Backward)
         Clock->>System: tick()
-        opt front is blocked
-            FrontSensor->>System: onFrontObstacleInterrupt()
-        end
         LeftSensor-->>System: leftObstacle
-        RightSensor-->>System: rightObstacle
-    end
-    alt front is open
-        System-->>Motor: Command(Forward)
-    else side is open
-        System-->>Motor: Command(TurnLeft or TurnRight)
+        alt left remains blocked
+            System-->>Motor: Command(TurnRight)
+            FrontSensor->>System: onFrontObstacleInterrupt()
+            System-->>Motor: Command(TurnLeft or Forward)
+        else left is open
+            System-->>Motor: Command(TurnLeft)
+        end
     end
 ```
 
@@ -143,7 +139,7 @@ sequenceDiagram
 | `stopCleaning()` | none | none | 이동과 청소를 중지하고 controller state를 idle로 전환한다. |
 | `onFrontObstacleInterrupt()` | none | none | 전방 장애물 interrupt를 기록하여 다음 제어 판단에서 즉시 회피하게 한다. |
 | `tick(periodicSensors)` | `PeriodicSensorData` | `Command` | 주기 센서 값을 반영하고 다음 motor/cleaner 명령을 결정한다. |
-| `readPeriodicSensors(periodicSensors)` | `PeriodicSensorData` | `SensorSnapshot` | 좌측, 우측, 먼지 periodic 값과 pending front interrupt를 하나의 snapshot으로 결합한다. |
+| `readPeriodicSensors(periodicSensors)` | `PeriodicSensorData` | `SensorSnapshot` | [R2-변경] 좌측, 먼지 periodic 값과 pending front interrupt 및 우측 탐색 결과를 하나의 snapshot으로 결합한다. [R2-삭제] ~~우측 periodic 값을 결합한다.~~ |
 | `decideNextCommand(snapshot)` | `SensorSnapshot` | `Command` | 핵심 제어 규칙에 따라 다음 동작 명령을 계산한다. |
 
 ## 9. System Operations

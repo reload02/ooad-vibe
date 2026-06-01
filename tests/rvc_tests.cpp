@@ -33,7 +33,6 @@ TEST(RvcTest, TickReadsAdapterInputsAndAppliesControllerCommand) {
     adapterView->frontObstacle = true;
     adapterView->sensors = rvc::PeriodicSensorData{
         .leftObstacle = false,
-        .rightObstacle = true,
         .dustDetected = false,
     };
 
@@ -44,7 +43,6 @@ TEST(RvcTest, TickReadsAdapterInputsAndAppliesControllerCommand) {
 
     EXPECT_TRUE(rvc.lastFrontObstacleInterrupt());
     EXPECT_FALSE(rvc.lastPeriodicSensors().leftObstacle);
-    EXPECT_TRUE(rvc.lastPeriodicSensors().rightObstacle);
     EXPECT_EQ(command.motion, rvc::Motion::TurnLeft);
     EXPECT_EQ(command.cleaningPower, rvc::CleaningPower::Off);
     EXPECT_EQ(adapterView->applyCount, 1);

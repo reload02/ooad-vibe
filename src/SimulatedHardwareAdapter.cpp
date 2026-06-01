@@ -72,7 +72,6 @@ bool SimulatedHardwareAdapter::hasFrontObstacleInterrupt() const {
 PeriodicSensorData SimulatedHardwareAdapter::readPeriodicSensors() const {
     return PeriodicSensorData{
         .leftObstacle = isObstacle(adjacent(robot_, turnLeft(direction_))),
-        .rightObstacle = isObstacle(adjacent(robot_, turnRight(direction_))),
         .dustDetected = hasDust(robot_),
     };
 }

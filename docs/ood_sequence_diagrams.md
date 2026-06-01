@@ -58,6 +58,7 @@ sequenceDiagram
 
 [변경] periodic sensor sampling 책임은 `GridSimulator`가 아니라 `SimulatedHardwareAdapter`에 둔다.
 [삭제] ~~`Simulator-->>Simulator: PeriodicSensorData`~~
+[R2-변경] 우측 장애물은 periodic sensor가 아니라 `TurnRight` 후 front interrupt로 탐색한다.
 
 ```mermaid
 sequenceDiagram
@@ -66,7 +67,6 @@ sequenceDiagram
 
     Rvc->>Adapter: readPeriodicSensors()
     Adapter->>Adapter: isObstacle(adjacent(left))
-    Adapter->>Adapter: isObstacle(adjacent(right))
     Adapter->>Adapter: hasDust(robotPosition)
     Adapter-->>Rvc: PeriodicSensorData
 ```
@@ -82,14 +82,17 @@ sequenceDiagram
     Controller->>Controller: decideNextCommand(snapshot)
     alt front open
         Controller-->>Controller: Command(Forward, activeCleanerPower)
-    else left open and right blocked
+    else front blocked and left open
         Controller-->>Controller: Command(TurnLeft, Off)
-    else left blocked and right open
+    else front blocked and left blocked
+        Controller->>Controller: state = RightProbing
         Controller-->>Controller: Command(TurnRight, Off)
-    else left open and right open
-        Controller->>Controller: choose alternating turn direction
-        Controller-->>Controller: Command(TurnLeft or TurnRight, Off)
-    else all front, left, and right blocked
+    else right probe front open
+        Controller-->>Controller: Command(Forward, activeCleanerPower)
+    else right probe front blocked
+        Controller->>Controller: state = EscapeAligning
+        Controller-->>Controller: Command(TurnLeft, Off)
+    else original heading restored
         Controller->>Controller: state = Escaping
         Controller-->>Controller: Command(Backward, Off)
     end
@@ -107,29 +110,35 @@ sequenceDiagram
     participant Controller as RvcController
 
     Rvc->>Adapter: readPeriodicSensors()
-    Adapter-->>Rvc: allBlockedPeriodicSensors
-    Rvc->>Controller: tick(allBlockedPeriodicSensors)
+    Adapter-->>Rvc: leftBlockedPeriodicSensors
+    Rvc->>Controller: tick(leftBlockedPeriodicSensors)
+    Controller-->>Rvc: Command(TurnRight, Off)
+    Rvc->>Adapter: applyCommand(TurnRight)
+    Rvc->>Adapter: hasFrontObstacleInterrupt()
+    Adapter-->>Rvc: front blocked after right probe
+    Controller-->>Rvc: Command(TurnLeft, Off)
+    Rvc->>Adapter: applyCommand(TurnLeft)
     Controller->>Controller: enter Escaping
     Controller-->>Rvc: Command(Backward, Off)
     Rvc->>Adapter: applyCommand(Backward)
-    loop while left and right are blocked
+    loop while left is blocked
         Rvc->>Adapter: readPeriodicSensors()
-        Adapter-->>Rvc: sideBlockedPeriodicSensors
-        Rvc->>Controller: tick(sideBlockedPeriodicSensors)
-        Controller-->>Rvc: Command(Backward, Off)
-        Rvc->>Adapter: applyCommand(Backward)
-    end
-    Rvc->>Adapter: readPeriodicSensors()
-    Adapter-->>Rvc: sideExitPeriodicSensors
-    Rvc->>Controller: tick(sideExitPeriodicSensors)
-    alt left is open
-        Controller->>Controller: state = Avoiding
-        Controller-->>Rvc: Command(TurnLeft, Off)
-    else right is open
-        Controller->>Controller: state = Avoiding
+        Adapter-->>Rvc: leftBlockedPeriodicSensors
+        Rvc->>Controller: tick(leftBlockedPeriodicSensors)
         Controller-->>Rvc: Command(TurnRight, Off)
+        Rvc->>Adapter: applyCommand(TurnRight)
+        Rvc->>Adapter: hasFrontObstacleInterrupt()
+        alt right probe open
+            Controller-->>Rvc: Command(Forward, activeCleanerPower)
+        else right probe blocked
+            Controller-->>Rvc: Command(TurnLeft, Off)
+            Rvc->>Adapter: applyCommand(TurnLeft)
+            Controller-->>Rvc: Command(Backward, Off)
+            Rvc->>Adapter: applyCommand(Backward)
+        end
     end
-    Rvc->>Adapter: applyCommand(turn command)
+    Controller-->>Rvc: Command(TurnLeft, Off)
+    Rvc->>Adapter: applyCommand(TurnLeft)
 ```
 
 ## 6. SD-06 Dust Boost

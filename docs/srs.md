@@ -19,7 +19,8 @@
 
 - 자동 청소 시작 및 중지
 - 전방 장애물 interrupt 처리
-- 좌측, 우측, 먼지 센서의 periodic sampling
+- [R2-변경] 좌측, 먼지 센서의 periodic sampling
+- [R2-추가] 우측 방향은 RVC가 우측으로 90도 회전한 뒤 전방 센서로 탐색
 - 장애물 회피 및 막힌 영역 탈출
 - 먼지 감지 시 boost 청소
 - CLI 시뮬레이터를 통한 요구사항 검증
@@ -48,11 +49,13 @@
 | Periodic Sensor | tick마다 주기적으로 샘플링되는 센서 |
 | Front Sensor | 전방 장애물 감지 센서이며 interrupt 방식으로 동작 |
 | Left Sensor | 좌측 장애물 감지 센서이며 periodic 방식으로 동작 |
-| Right Sensor | 우측 장애물 감지 센서이며 periodic 방식으로 동작 |
+| [R2-삭제] ~~Right Sensor~~ | ~~우측 장애물 감지 센서이며 periodic 방식으로 동작~~ |
 | Dust Sensor | 현재 위치의 먼지 감지 센서이며 periodic 방식으로 동작 |
 | Cleaner | 일반 청소 또는 강화 청소를 수행하는 청소 장치 |
 | Boost | 먼지 감지 후 일정 tick 동안 유지되는 강화 청소 세기 |
-| Escaping | 전방, 좌측, 우측이 모두 막혔을 때 탈출을 위해 후진하는 상태 |
+| Right Probing | [R2-추가] `TurnRight` 후 전방 센서로 기존 우측 방향 장애물 여부를 확인하는 탐색 상태 |
+| Escape Aligning | [R2-추가] 우측 탐색 실패 후 `TurnLeft`로 원래 진행 방향을 복구하는 상태 |
+| Escaping | [R2-변경] 전방과 좌측이 막히고 우측 탐색도 실패했을 때 원래 진행 방향의 반대쪽으로 후진하는 상태 |
 | OOA | Object-Oriented Analysis |
 | SSD | System Sequence Diagram |
 
@@ -78,7 +81,7 @@
 
 ### 2.1 Product Perspective
 
-RVC Control SW는 센서 입력과 사용자 요청을 받아 actuator 명령을 생성하는 제어 소프트웨어이다. [변경] `Rvc`는 사용자 요청과 `RvcHardwareAdapter` 입력을 받아 `RvcController`에 전달하고, controller가 반환한 motor motion과 cleaner power command를 adapter에 적용한다. 전방 장애물은 interrupt로 전달되고, 좌측/우측/먼지 센서는 제어 tick마다 periodic 데이터로 전달된다.
+RVC Control SW는 센서 입력과 사용자 요청을 받아 actuator 명령을 생성하는 제어 소프트웨어이다. [변경] `Rvc`는 사용자 요청과 `RvcHardwareAdapter` 입력을 받아 `RvcController`에 전달하고, controller가 반환한 motor motion과 cleaner power command를 adapter에 적용한다. [R2-변경] 전방 장애물은 interrupt로 전달되고, 좌측/먼지 센서는 제어 tick마다 periodic 데이터로 전달된다. 우측 장애물 여부는 `TurnRight`로 방향을 바꾼 뒤 전방 센서 interrupt로 탐색한다.
 
 [변경] 시뮬레이터는 실제 하드웨어가 아니라 요구사항 검증을 위한 외부 환경이다. `GridSimulator`는 `SimulatedHardwareAdapter`를 구성해 지도에서 센서 값을 생성하고, `Rvc`가 adapter에 적용한 command 결과를 로그와 실행 결과로 만든다.
 [삭제] ~~시뮬레이터는 지도에서 센서 값을 생성하고, controller가 반환한 command를 적용해 로그와 실행 결과를 만든다.~~
@@ -111,7 +114,6 @@ classDiagram
     }
 
     class LeftSensor
-    class RightSensor
     class DustSensor
 
     class DigitalClock {
@@ -148,22 +150,18 @@ classDiagram
     RVC *-- Cleaner
     RVC *-- FrontSensor
     RVC *-- LeftSensor
-    RVC *-- RightSensor
     RVC *-- DustSensor
     PeriodicSensor <|-- LeftSensor
-    PeriodicSensor <|-- RightSensor
     PeriodicSensor <|-- DustSensor
     DigitalClock --> RvcController : tick
     FrontSensor --> RvcController : interrupt
     LeftSensor --> RvcController : periodic data
-    RightSensor --> RvcController : periodic data
     DustSensor --> RvcController : periodic data
     RvcController --> Command : creates
     Command --> Motor : motion
     Command --> Cleaner : cleaning power
     Environment --> FrontSensor : sensed by
     Environment --> LeftSensor : sensed by
-    Environment --> RightSensor : sensed by
     Environment --> DustSensor : sensed by
 ```
 
@@ -173,10 +171,10 @@ classDiagram
 
 - 사용자의 자동 청소 시작 및 중지 요청을 처리한다.
 - 전방 장애물 interrupt를 수신하면 즉시 회피 판단으로 전환한다.
-- 좌측, 우측, 먼지 센서 값을 tick마다 주기적으로 샘플링한다.
-- 전방 장애물 상황에서 열린 좌측 또는 우측 방향으로 회전한다.
-- 좌우가 모두 열린 경우 좌우 회전 방향을 번갈아 선택한다.
-- 전방, 좌측, 우측이 모두 막힌 경우 `Escaping` 상태로 전환하고 후진 명령을 지속한다.
+- [R2-변경] 좌측, 먼지 센서 값을 tick마다 주기적으로 샘플링한다.
+- [R2-변경] 전방 장애물 상황에서 좌측이 열려 있으면 좌회전하고, 좌측이 막혀 있으면 우측 탐색을 위해 우회전한다.
+- [R2-삭제] ~~좌우가 모두 열린 경우 좌우 회전 방향을 번갈아 선택한다.~~
+- [R2-변경] 전방과 좌측이 막히고 우측 탐색도 실패하면 원래 진행 방향을 복구한 뒤 `Escaping` 상태로 전환하고 후진 명령을 지속한다.
 - 먼지 감지 시 설정된 tick 동안 청소 세기를 `Boost`로 유지한다.
 - [변경] CLI 시뮬레이터를 통해 `Rvc`와 `SimulatedHardwareAdapter` 기반 지도, 센서, 명령, 위치, 방향, 청소 결과를 검증한다.
 
@@ -188,7 +186,7 @@ classDiagram
 | Tester | CLI 시뮬레이터와 테스트 코드를 통해 요구사항 충족 여부를 검증한다. |
 | Front Sensor | 전방 장애물을 interrupt 이벤트로 알린다. |
 | Left Sensor | 좌측 장애물 상태를 주기적으로 제공한다. |
-| Right Sensor | 우측 장애물 상태를 주기적으로 제공한다. |
+| [R2-삭제] ~~Right Sensor~~ | ~~우측 장애물 상태를 주기적으로 제공한다.~~ |
 | Dust Sensor | 먼지 감지 상태를 주기적으로 제공한다. |
 | Digital Clock | tick 기반 제어 주기를 제공한다. |
 | Motor | `Forward`, `Backward`, `TurnLeft`, `TurnRight`, `Stop` 명령을 수행한다. |
@@ -197,7 +195,8 @@ classDiagram
 ### 2.4 Constraints
 
 - 전방 센서는 interrupt 방식으로 처리해야 한다.
-- 좌측 센서, 우측 센서, 먼지 센서는 periodic 방식으로 처리해야 한다.
+- [R2-변경] 좌측 센서와 먼지 센서는 periodic 방식으로 처리해야 한다.
+- [R2-삭제] ~~우측 센서는 periodic 방식으로 처리해야 한다.~~
 - 핵심 제어 로직은 하드웨어와 직접 결합되지 않아야 한다.
 - 컨트롤러의 판단은 동일 입력에 대해 결정적이어야 한다.
 - 프로젝트는 CMake와 C++20로 빌드되어야 한다.
@@ -209,7 +208,8 @@ classDiagram
 - 사용자의 자동 청소 시작 요청은 `startCleaning()` 호출로 추상화한다.
 - 사용자의 자동 청소 중지 요청은 `stopCleaning()` 호출로 추상화한다.
 - 전방 장애물 interrupt는 `onFrontObstacleInterrupt()` 호출로 추상화한다.
-- tick마다 좌측, 우측, 먼지 센서 값이 `PeriodicSensorData`로 제공된다.
+- [R2-변경] tick마다 좌측, 먼지 센서 값이 `PeriodicSensorData`로 제공된다.
+- [R2-추가] 기존 우측 방향의 장애물 여부는 우측 회전 후 전방 interrupt로 확인한다.
 - [추가] `Rvc`는 `RvcHardwareAdapter`에서 interrupt와 periodic sensor 값을 읽고, `RvcController`의 command를 adapter에 적용한다.
 - [추가] 검증 환경에서는 `SimulatedHardwareAdapter`가 `RvcHardwareAdapter` 계약을 구현한다.
 - 실제 하드웨어의 물리적 지연, 모터 가속도, 센서 노이즈, 배터리 상태는 본 SRS의 범위 밖이다.
@@ -238,7 +238,8 @@ classDiagram
 | --- | --- | --- | --- |
 | 전방 장애물 | Interrupt | `frontObstacle` | 전방 장애물이 감지되면 즉시 컨트롤러에 이벤트를 전달한다. |
 | 좌측 장애물 | Periodic | `leftObstacle` | tick마다 좌측 방향의 장애물 여부를 제공한다. |
-| 우측 장애물 | Periodic | `rightObstacle` | tick마다 우측 방향의 장애물 여부를 제공한다. |
+| [R2-삭제] ~~우측 장애물~~ | ~~Periodic~~ | ~~`rightObstacle`~~ | ~~tick마다 우측 방향의 장애물 여부를 제공한다.~~ |
+| 우측 탐색 결과 | [R2-추가] Derived from Front Interrupt | `rightProbe=none\|checking\|open\|blocked` | `TurnRight` 후 전방 센서 interrupt로 기존 우측 방향의 장애물 여부를 판단한다. |
 | 먼지 감지 | Periodic | `dustDetected` | tick마다 현재 위치의 먼지 감지 여부를 제공한다. |
 | Motor command | Actuator output | `motion` | 이동, 회전, 정지 명령을 수행한다. |
 | Cleaner command | Actuator output | `cleaningPower` | 청소 장치 세기를 수행한다. |
@@ -257,7 +258,7 @@ classDiagram
 | `RvcController::readPeriodicSensors(const PeriodicSensorData&)` | 전방 interrupt 상태와 periodic 센서 값을 하나의 snapshot으로 결합한다. |
 | `RvcController::decideNextCommand(const SensorSnapshot&)` | 센서 snapshot을 기반으로 다음 명령을 결정한다. |
 | `RvcHardwareAdapter::hasFrontObstacleInterrupt()` | [추가] 전방 장애물 interrupt 여부를 제공한다. |
-| `RvcHardwareAdapter::readPeriodicSensors()` | [추가] 좌측, 우측, 먼지 periodic sensor 값을 제공한다. |
+| `RvcHardwareAdapter::readPeriodicSensors()` | [R2-변경] 좌측, 먼지 periodic sensor 값을 제공한다. [R2-삭제] ~~우측 periodic sensor 값을 제공한다.~~ |
 | `RvcHardwareAdapter::applyCommand(const Command&)` | [추가] motor/cleaner command를 하드웨어 또는 테스트 환경에 적용한다. |
 | `GridSimulator::run(int, bool)` | [변경] 지정된 tick 수만큼 `Rvc`와 `SimulatedHardwareAdapter` 기반 시뮬레이션을 실행한다. |
 | `GridSimulator::loadScenario(const std::filesystem::path&)` | 시나리오 파일을 읽어 tick 수와 지도 정보를 구성한다. |
@@ -322,7 +323,8 @@ map:
 | `tick` | 현재 제어 tick 번호 |
 | `frontInterrupt` | 전방 장애물 interrupt 발생 여부 |
 | `leftPeriodic` | 좌측 periodic 센서 상태 |
-| `rightPeriodic` | 우측 periodic 센서 상태 |
+| [R2-삭제] ~~`rightPeriodic`~~ | ~~우측 periodic 센서 상태~~ |
+| `rightProbe` | [R2-추가] 우측 탐색 상태 또는 결과. 값은 `none`, `checking`, `open`, `blocked` 중 하나이다. |
 | `dustPeriodic` | 먼지 periodic 센서 상태 |
 | `motion` | 컨트롤러가 생성한 이동 명령 |
 | `cleaner` | 컨트롤러가 생성한 청소 세기 |
@@ -394,8 +396,8 @@ sequenceDiagram
 | 주요 주체 | Front Sensor |
 | 목표 | 전방 장애물 감지 시 충돌 없이 회피한다. |
 | 사전 조건 | RVC가 자동 청소 중이다. |
-| 기본 흐름 | 전방 센서가 interrupt를 발생시키면 시스템은 즉시 전진을 중단하고 좌측/우측 periodic 센서 값을 기준으로 열린 방향을 선택한다. |
-| 대안 흐름 | 좌우가 모두 열려 있으면 이전 선택과 반대 방향을 선택하여 좌우를 번갈아 회전한다. |
+| 기본 흐름 | [R2-변경] 전방 센서가 interrupt를 발생시키면 시스템은 즉시 전진을 중단하고 좌측 periodic 센서 값을 확인한다. 좌측이 열려 있으면 `TurnLeft`로 회피한다. |
+| 대안 흐름 | [R2-변경] 좌측이 막혀 있으면 `TurnRight`로 우측 탐색을 수행한다. 탐색 후 전방 interrupt가 없으면 기존 우측 방향으로 전진 청소를 재개하고, 전방 interrupt가 있으면 `TurnLeft`로 원래 진행 방향을 복구한 뒤 후진 탈출에 진입한다. [R2-삭제] ~~좌우가 모두 열려 있으면 이전 선택과 반대 방향을 선택하여 좌우를 번갈아 회전한다.~~ |
 | 사후 조건 | RVC는 장애물을 회피하고 청소를 계속한다. |
 
 ```mermaid
@@ -404,18 +406,17 @@ sequenceDiagram
     actor Clock as Digital Clock
     participant System as RVC Control SW
     actor LeftSensor as Left Sensor
-    actor RightSensor as Right Sensor
     actor Motor
 
     FrontSensor->>System: onFrontObstacleInterrupt()
     System->>System: mark front interrupt pending
     Clock->>System: tick(periodicSensors)
     LeftSensor-->>System: leftObstacle
-    RightSensor-->>System: rightObstacle
-    alt one side is open
-        System-->>Motor: Command(TurnLeft or TurnRight)
-    else both sides are blocked
-        System-->>Motor: Command(Backward)
+    alt left is open
+        System-->>Motor: Command(TurnLeft)
+    else left is blocked
+        System-->>Motor: Command(TurnRight)
+        System->>System: probe former right with Front Sensor
     end
 ```
 
@@ -423,11 +424,11 @@ sequenceDiagram
 
 | 항목 | 내용 |
 | --- | --- |
-| 주요 주체 | Front Sensor, Left Sensor, Right Sensor |
-| 목표 | 전방, 좌측, 우측이 모두 막힌 상황에서 탈출 가능한 상태까지 이동한다. |
-| 사전 조건 | RVC가 자동 청소 중이며 전방, 좌측, 우측이 모두 막혀 있다. |
-| 기본 흐름 | 시스템은 `Escaping` 상태로 전환하고 좌측 또는 우측 측면 탈출구가 열릴 때까지 후진 명령을 지속한다. |
-| 사후 조건 | 탈출 가능해지면 열린 측면 방향으로 회전하고 청소를 계속할 수 있는 상태로 복귀한다. |
+| 주요 주체 | [R2-변경] Front Sensor, Left Sensor |
+| 목표 | [R2-변경] 전방과 좌측이 막히고 우측 탐색도 실패한 상황에서 탈출 가능한 상태까지 이동한다. |
+| 사전 조건 | [R2-변경] RVC가 자동 청소 중이며 전방 interrupt가 발생했고 좌측 periodic 센서가 막힘을 보고한다. |
+| 기본 흐름 | [R2-변경] 시스템은 우측 탐색을 위해 `TurnRight`한다. 탐색 후 전방 interrupt가 있으면 `TurnLeft`로 원래 진행 방향을 복구하고 `Escaping` 상태에서 `Backward`를 수행한다. 이후 매 후진 후 좌측이 막혀 있으면 우측 탐색을 반복한다. |
+| 사후 조건 | [R2-변경] 좌측이 열리면 `TurnLeft`로 탈출하고, 우측 탐색 결과가 열림이면 해당 방향으로 전진 청소를 재개한다. |
 
 ```mermaid
 sequenceDiagram
@@ -435,24 +436,26 @@ sequenceDiagram
     actor Clock as Digital Clock
     participant System as RVC Control SW
     actor LeftSensor as Left Sensor
-    actor RightSensor as Right Sensor
     actor Motor
 
     FrontSensor->>System: onFrontObstacleInterrupt()
     Clock->>System: tick()
     LeftSensor-->>System: leftObstacle = true
-    RightSensor-->>System: rightObstacle = true
+    System-->>Motor: Command(TurnRight)
+    FrontSensor->>System: onFrontObstacleInterrupt()
+    System-->>Motor: Command(TurnLeft)
     System->>System: enterEscaping()
-    loop while left and right are blocked
+    loop while left is blocked
         System-->>Motor: Command(Backward)
         Clock->>System: tick()
-        opt front is still blocked
-            FrontSensor->>System: onFrontObstacleInterrupt()
-        end
         LeftSensor-->>System: leftObstacle
-        RightSensor-->>System: rightObstacle
+        alt left remains blocked
+            System-->>Motor: Command(TurnRight)
+            System->>System: probe former right with Front Sensor
+        else left is open
+            System-->>Motor: Command(TurnLeft)
+        end
     end
-    System-->>Motor: Command(TurnLeft or TurnRight)
 ```
 
 #### 3.2.5 UC-05 Boost Cleaning On Dust / SSD-04
@@ -490,12 +493,10 @@ sequenceDiagram
     actor Clock as Digital Clock
     participant System as RVC Control SW
     actor LeftSensor as Left Sensor
-    actor RightSensor as Right Sensor
     actor DustSensor as Dust Sensor
 
     Clock->>System: tick()
     LeftSensor-->>System: leftObstacle
-    RightSensor-->>System: rightObstacle
     DustSensor-->>System: dustDetected
     System->>System: updatePeriodicSensorSnapshot()
 ```
@@ -509,14 +510,14 @@ sequenceDiagram
 | FR-03 | System shall move forward while cleaning when no obstacle blocks the front direction. | 전방 interrupt가 없으면 `motion=Forward`, `cleaningPower=Normal` 또는 `Boost`를 반환한다. | UC-01 |
 | FR-04 | Front obstacle detection shall be handled as an interrupt event. | 전방 장애물은 periodic 입력이 아니라 `onFrontObstacleInterrupt()` 이벤트로 컨트롤러에 전달된다. | UC-03 |
 | FR-05 | System shall stop forward motion immediately when a front obstacle interrupt is received. | interrupt가 pending 상태인 tick에서 컨트롤러는 `Forward` 대신 회피, 회전, 또는 후진 명령을 반환한다. | UC-03 |
-| FR-06 | Left, right, and dust sensors shall be sampled periodically on control tick. | `tick()`은 `PeriodicSensorData`의 좌측, 우측, 먼지 값을 사용하여 명령을 결정한다. | UC-03, UC-05 |
-| FR-07 | If front is blocked and only left is open, System shall turn left. | `frontObstacle=true`, `leftObstacle=false`, `rightObstacle=true`이면 `motion=TurnLeft`를 반환한다. | UC-03 |
-| FR-08 | If front is blocked and only right is open, System shall turn right. | `frontObstacle=true`, `leftObstacle=true`, `rightObstacle=false`이면 `motion=TurnRight`를 반환한다. | UC-03 |
-| FR-09 | If front is blocked and both left and right are open, System shall choose turn direction by alternating left and right. | 동일 조건이 반복되면 첫 선택은 좌회전, 다음 선택은 우회전처럼 방향을 번갈아 반환한다. | UC-03 |
-| FR-10 | If front, left, and right are all blocked, System shall enter `Escaping` state. | 세 방향이 모두 막힌 tick 이후 컨트롤러 상태는 `Escaping`이 된다. | UC-04 |
-| FR-11 | In `Escaping` state, System shall keep moving backward until escape is possible. | `Escaping` 상태에서 좌우 측면이 계속 막혀 있으면 매 tick `motion=Backward`를 반환한다. | UC-04 |
-| FR-12 | Escape shall be considered possible when at least one side direction is open. | `Escaping` 상태에서 좌측 또는 우측 중 하나 이상이 열리면 탈출 가능 상태로 판단한다. | UC-04 |
-| FR-13 | After escape becomes possible, System shall turn toward an open side. | 열린 측면 방향으로 `TurnLeft` 또는 `TurnRight` 명령을 반환한다. | UC-04 |
+| FR-06 | [R2-변경] Left and dust sensors shall be sampled periodically on control tick. [R2-삭제] ~~Right sensor shall be sampled periodically.~~ | `tick()`은 `PeriodicSensorData`의 좌측, 먼지 값을 사용하여 명령을 결정한다. | UC-03, UC-05 |
+| FR-07 | If front is blocked and left is open, System shall turn left. | `frontObstacle=true`, `leftObstacle=false`이면 `motion=TurnLeft`를 반환한다. | UC-03 |
+| FR-08 | [R2-변경] If front is blocked and left is blocked, System shall turn right to probe the former right direction with the front sensor. | `frontObstacle=true`, `leftObstacle=true`이면 `motion=TurnRight`로 우측 탐색 상태에 진입한다. | UC-03 |
+| FR-09 | [R2-삭제] ~~If front is blocked and both left and right are open, System shall choose turn direction by alternating left and right.~~ | ~~우측 센서 제거 후 좌우 동시 개방 조건을 즉시 판단하지 않는다.~~ | UC-03 |
+| FR-10 | [R2-변경] If front is blocked, left is blocked, and right probing reports blocked, System shall restore the original heading and enter `Escaping`. | 우측 탐색 실패 후 `TurnLeft`로 원래 진행 방향을 복구하고 `Escaping` 상태가 된다. | UC-04 |
+| FR-11 | [R2-변경] In `Escaping` state, System shall move backward once and then probe right again when left remains blocked. | `Escaping` 상태에서 `Backward` 후 `leftObstacle=true`이면 우측 탐색을 반복한다. | UC-04 |
+| FR-12 | [R2-변경] Escape shall be considered possible when left is open or right probing confirms open. | `leftObstacle=false` 또는 우측 탐색 후 전방 interrupt 없음이면 탈출 가능 상태로 판단한다. | UC-04 |
+| FR-13 | [R2-변경] After escape becomes possible, System shall turn toward the confirmed open direction or continue forward after successful right probing. | 좌측 open이면 `TurnLeft`, 우측 탐색 open이면 기존 우측 방향으로 `Forward`를 반환한다. | UC-04 |
 | FR-14 | If dust is detected, System shall set cleaner power to boost for a configured number of ticks. | `dustDetected=true`인 tick에서 `cleaningPower=Boost`가 되고 `dustBoostTicks` 동안 유지된다. | UC-05 |
 | FR-15 | If boost duration expires and no new dust is detected, System shall return cleaner power to normal. | 먼지가 새로 감지되지 않고 boost 잔여 tick이 끝나면 `cleaningPower=Normal`로 복귀한다. | UC-05 |
 | FR-16 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | 지도 출력은 로봇 방향 문자, `#`, `.`, `*`를 사용해 현재 상태를 표현한다. | VS-01 |
@@ -564,19 +565,21 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | `Idle` | 청소하지 않는 대기 상태 | 초기 상태 또는 청소 중지 요청 | 청소 시작 요청 |
 | `Cleaning` | 기본 자동 청소 상태 | 청소 시작, 전방이 열린 상태, 탈출 완료 | 전방 interrupt, 청소 중지 |
-| `Avoiding` | 전방 장애물 회피를 위해 회전하는 상태 | 전방 interrupt 후 열린 좌/우 방향 존재 | 다음 tick에서 전방 상태에 따라 청소 또는 탈출 |
-| `Escaping` | 세 방향 막힘 상황에서 후진하는 상태 | 전방, 좌측, 우측이 모두 막힘 | 좌측 또는 우측 중 하나 이상 열림 또는 청소 중지 |
+| `Avoiding` | 전방 장애물 회피를 위해 회전하는 상태 | 전방 interrupt 후 좌측 open | 다음 tick에서 전방 상태에 따라 청소 또는 탈출 |
+| `RightProbing` | [R2-추가] 기존 우측 방향을 전방 센서로 확인하는 상태 | 전방 interrupt 후 좌측 blocked | 전방 clear 또는 전방 blocked 확인 |
+| `EscapeAligning` | [R2-추가] 우측 탐색 실패 후 원래 진행 방향으로 복구하는 상태 | `RightProbing`에서 전방 blocked | 복구 회전 완료 |
+| `Escaping` | [R2-변경] 원래 진행 방향의 반대쪽으로 후진하는 상태 | 전방 blocked, 좌측 blocked, 우측 탐색 blocked | 좌측 open, 우측 탐색 open, 또는 청소 중지 |
 
 #### 3.7.2 Core Data Types
 
 | 타입 | 필드 또는 값 | 설명 |
 | --- | --- | --- |
-| `PeriodicSensorData` | `leftObstacle`, `rightObstacle`, `dustDetected` | tick마다 샘플링되는 센서 입력 |
-| `SensorSnapshot` | `frontObstacle`, `leftObstacle`, `rightObstacle`, `dustDetected` | interrupt와 periodic 센서를 결합한 판단용 snapshot |
+| `PeriodicSensorData` | [R2-변경] `leftObstacle`, `dustDetected` | tick마다 샘플링되는 센서 입력. [R2-삭제] ~~`rightObstacle`~~ |
+| `SensorSnapshot` | [R2-변경] `frontObstacle`, `leftObstacle`, `dustDetected`, `rightProbe` | interrupt와 periodic 센서 및 우측 탐색 결과를 결합한 판단용 snapshot. [R2-삭제] ~~`rightObstacle`~~ |
 | `Command` | `motion`, `cleaningPower`, `reason` | 컨트롤러가 생성하는 actuator 명령 |
 | `Motion` | `None`, `Stop`, `Forward`, `Backward`, `TurnLeft`, `TurnRight` | 이동 또는 회전 명령 종류 |
 | `CleaningPower` | `Off`, `Normal`, `Boost` | cleaner 출력 세기 |
-| `ControllerState` | `Idle`, `Cleaning`, `Avoiding`, `Escaping` | 컨트롤러 내부 상태 |
+| `ControllerState` | [R2-변경] `Idle`, `Cleaning`, `Avoiding`, `RightProbing`, `EscapeAligning`, `Escaping` | 컨트롤러 내부 상태 |
 | `Position` | `row`, `col` | 시뮬레이터 내 로봇 좌표 |
 | `Direction` | `North`, `East`, `South`, `West` | 시뮬레이터 내 로봇 방향 |
 
@@ -584,16 +587,17 @@ sequenceDiagram
 
 1. 청소가 시작되면 RVC는 cleaner를 켠 상태로 전진 청소를 수행한다.
 2. 전방 장애물이 감지되면 interrupt 이벤트로 처리하고 해당 tick에서 전진 명령을 내리지 않는다.
-3. 좌측, 우측, 먼지 센서는 tick마다 periodic 데이터로 반영한다.
-4. 전방이 막히고 좌측만 열려 있으면 좌회전한다.
-5. 전방이 막히고 우측만 열려 있으면 우회전한다.
-6. 전방이 막히고 좌측과 우측이 모두 열려 있으면 좌우를 번갈아 선택한다.
-7. 전방, 좌측, 우측이 모두 막히면 `Escaping` 상태로 전환한다.
-8. `Escaping` 상태에서는 측면 탈출구가 열릴 때까지 후진 명령을 지속한다.
-9. 탈출 가능 조건은 좌측 또는 우측 중 하나 이상이 열린 상태이다.
-10. 탈출 가능해진 뒤 열린 측면 방향으로 회전한다.
-11. 먼지가 감지되면 `dustBoostTicks`만큼 `Boost`를 유지한다.
-12. boost 유지 시간이 끝나고 새 먼지가 감지되지 않으면 `Normal`로 복귀한다.
+3. [R2-변경] 좌측, 먼지 센서는 tick마다 periodic 데이터로 반영한다. [R2-삭제] ~~우측 센서는 tick마다 periodic 데이터로 반영한다.~~
+4. 전방이 막히고 좌측이 열려 있으면 좌회전한다.
+5. [R2-변경] 전방이 막히고 좌측이 막혀 있으면 우측 탐색을 위해 우회전한다.
+6. [R2-삭제] ~~전방이 막히고 좌측과 우측이 모두 열려 있으면 좌우를 번갈아 선택한다.~~
+7. [R2-변경] 우측 탐색 후 전방이 열려 있으면 기존 우측 방향이 열린 것으로 보고 전진 청소를 재개한다.
+8. [R2-변경] 우측 탐색 후 전방이 막혀 있으면 `TurnLeft`로 원래 진행 방향을 복구한 뒤 `Escaping` 상태로 전환한다.
+9. [R2-변경] `Escaping` 상태에서는 `Backward`를 한 번 수행한 뒤 좌측이 계속 막혀 있으면 다시 우측 탐색을 수행한다.
+10. [R2-변경] 탈출 가능 조건은 좌측이 열렸거나 우측 탐색으로 기존 우측 방향이 열렸다고 확인된 상태이다.
+11. [R2-변경] 탈출 가능해진 뒤 좌측이 열렸으면 `TurnLeft`, 우측 탐색이 성공했으면 `Forward`로 전진 청소를 재개한다.
+12. 먼지가 감지되면 `dustBoostTicks`만큼 `Boost`를 유지한다.
+13. boost 유지 시간이 끝나고 새 먼지가 감지되지 않으면 `Normal`로 복귀한다.
 
 ## Appendix A. OOA Analysis Summary
 
@@ -608,7 +612,7 @@ sequenceDiagram
 | SimulatedHardwareAdapter | [추가] 격자 환경에서 `RvcHardwareAdapter` 계약을 구현하는 테스트용 adapter이다. |
 | FrontSensor | 전방 장애물을 interrupt로 알린다. |
 | LeftSensor | 좌측 장애물 상태를 periodic 방식으로 제공한다. |
-| RightSensor | 우측 장애물 상태를 periodic 방식으로 제공한다. |
+| [R2-삭제] ~~RightSensor~~ | ~~우측 장애물 상태를 periodic 방식으로 제공한다.~~ |
 | DustSensor | 현재 위치의 먼지 감지 상태를 periodic 방식으로 제공한다. |
 | DigitalClock | 제어 tick을 발생시킨다. |
 | Motor | 전진, 후진, 좌회전, 우회전, 정지 동작을 수행한다. |
@@ -619,11 +623,13 @@ sequenceDiagram
 ### A.2 Important Domain Rules
 
 - FrontSensor는 polling 대상이 아니라 interrupt source이다.
-- LeftSensor, RightSensor, DustSensor는 DigitalClock tick에 맞춰 sampling된다.
+- [R2-변경] LeftSensor와 DustSensor는 DigitalClock tick에 맞춰 sampling된다.
+- [R2-삭제] ~~RightSensor는 DigitalClock tick에 맞춰 sampling된다.~~
+- [R2-추가] 기존 우측 방향은 `TurnRight` 후 FrontSensor interrupt로 탐색한다.
 - [변경] RvcController는 sensor와 actuator의 구체 구현을 알지 않는다.
 - [추가] Rvc는 RvcHardwareAdapter 추상 계약을 통해 sensor 입력과 actuator 출력을 연결한다.
 - [추가] GridSimulator는 SimulatedHardwareAdapter를 통해 테스트용 외부 세계를 제공한다.
-- `Escaping` 상태에서는 후방 센서 없이 backward command를 반복한다.
+- [R2-변경] `Escaping` 상태에서는 후방 센서 없이 `Backward`를 수행하되, 매 후진 후 좌측이 막혀 있으면 우측 탐색을 반복한다.
 - Simulator의 Environment는 실제 하드웨어가 아니라 테스트용 외부 세계이다.
 
 ### A.3 System Operations
@@ -658,10 +664,11 @@ ctest --test-dir build -C Debug --output-on-failure
 | `ControllerMovesForwardWhenPathIsClear` | FR-01, FR-03 |
 | `StopCleaningReturnsStopAndOff` | FR-02 |
 | `FrontInterruptTriggersImmediateAvoidance` | FR-04, FR-05 |
-| `TurnsTowardOpenSide` | FR-07, FR-08 |
-| `AlternatesWhenBothSidesAreOpen` | FR-09 |
-| `AllBlockedEntersEscapingAndKeepsBackingUp` | FR-10, FR-11 |
-| `EscapingIgnoresOpenFrontUntilSideOpens` | FR-12, FR-13 |
+| `TurnsTowardOpenSide` | [R2-변경] FR-07, FR-08 재검증 필요 |
+| `AlternatesWhenBothSidesAreOpen` | [R2-삭제] ~~FR-09~~ |
+| `RightProbeBlockedAlignsBeforeEscaping` | [R2-추가] FR-10 |
+| `EscapingBacksUpThenReprobesRight` | [R2-추가] FR-11 |
+| `RightProbeOpenResumesForward` | [R2-추가] FR-12, FR-13 |
 | `DustBoostLastsConfiguredTicks` | FR-14, FR-15 |
 | `AvoidanceOutputStaysOffWhileBoostStateIsMaintained` | FR-05, FR-14, FR-15 |
 
@@ -670,11 +677,11 @@ ctest --test-dir build -C Debug --output-on-failure
 | 테스트 | 검증 요구사항 |
 | --- | --- |
 | `SimulatorCleansDustAndLogsCommands` | FR-14, FR-15, FR-17 |
-| `SimulatorUsesBackwardEscape` | FR-10, FR-11, FR-18 |
-| `SimulatorKeepsCommandingBackwardWhenBoxedIn` | FR-11 |
-| `SimulatorKeepsBackingUpUntilSideExitOpens` | FR-11, FR-12, FR-13 |
+| `SimulatorUsesBackwardEscape` | [R2-변경] FR-10, FR-11, FR-18 재검증 필요 |
+| `SimulatorKeepsCommandingBackwardWhenBoxedIn` | [R2-변경] FR-11 재검증 필요 |
+| `SimulatorRepeatsRightProbeAfterBackward` | [R2-추가] FR-11, FR-12, FR-13 |
 | `SimulatorKeepsCleanerOffDuringBoostedEscape` | FR-10, FR-11, FR-14, FR-15 |
-| `SimulatorTurnsAfterFrontInterrupt` | FR-04, FR-05, FR-08 |
+| `SimulatorTurnsAfterFrontInterrupt` | [R2-변경] FR-04, FR-05, FR-08 재검증 필요 |
 | `SimulatorCliDefaultRuns` | FR-16, FR-17 |
 | `SimulatorCliContinuousBackwardScenarioRuns` | FR-10, FR-11, FR-16, FR-17 |
 
@@ -682,7 +689,7 @@ ctest --test-dir build -C Debug --output-on-failure
 
 - 시뮬레이터 로그에서 전방 장애물 interrupt와 회피 명령이 같은 tick 흐름에서 확인되어야 한다.
 - 먼지가 있는 칸에서 `dustPeriodic=detected`와 `cleaner=Boost`가 확인되어야 한다.
-- 세 방향이 막힌 지도에서는 `motion=Backward`가 반복되어야 한다.
+- [R2-변경] 전방과 좌측이 막히고 우측 탐색도 막힌 지도에서는 원래 방향 복구 후 `motion=Backward`와 우측 재탐색 흐름이 확인되어야 한다.
 - `--quiet-map` 옵션을 사용하면 지도 frame 출력 없이 로그와 summary 중심으로 확인할 수 있어야 한다.
 - 문서의 요구사항 ID와 테스트 추적성이 `docs/traceability.md`와 모순되지 않아야 한다.
 
@@ -705,14 +712,14 @@ ctest --test-dir build -C Debug --output-on-failure
 | FR-03 | UC-01 | SSD-01 | SD-01, SD-04 | `RvcController`, `Command` |
 | FR-04 | UC-03 | SSD-02 | SD-02 | `RvcController` |
 | FR-05 | UC-03 | SSD-02 | SD-02, SD-04 | `RvcController`, `Command` |
-| FR-06 | UC-03, UC-05 | SSD-03 | SD-03 | `PeriodicSensorData`, `SensorSnapshot` |
+| FR-06 | UC-03, UC-05 | SSD-03 | SD-03 | [R2-변경] `PeriodicSensorData`, `SensorSnapshot` without `rightObstacle` |
 | FR-07 | UC-03 | SSD-02 | SD-04 | `RvcController` |
-| FR-08 | UC-03 | SSD-02 | SD-04 | `RvcController` |
-| FR-09 | UC-03 | SSD-02 | SD-04 | `RvcController` |
-| FR-10 | UC-04 | SSD-05 | SD-05 | `RvcController` |
-| FR-11 | UC-04 | SSD-05 | SD-05 | `RvcController` |
-| FR-12 | UC-04 | SSD-05 | SD-05 | `SensorSnapshot` |
-| FR-13 | UC-04 | SSD-05 | SD-05 | `RvcController` |
+| FR-08 | UC-03 | SSD-02 | SD-04 | [R2-변경] `RightProbing`, `RvcController` |
+| FR-09 | UC-03 | SSD-02 | SD-04 | [R2-삭제] ~~좌우 교대 정책~~ |
+| FR-10 | UC-04 | SSD-05 | SD-05 | [R2-변경] `EscapeAligning`, `Escaping`, `RvcController` |
+| FR-11 | UC-04 | SSD-05 | SD-05 | [R2-변경] `Escaping`, `RightProbing` |
+| FR-12 | UC-04 | SSD-05 | SD-05 | [R2-변경] `SensorSnapshot`, `rightProbe` |
+| FR-13 | UC-04 | SSD-05 | SD-05 | [R2-변경] `RvcController`, `Command` |
 | FR-14 | UC-05 | SSD-04 | SD-06 | `RvcController` |
 | FR-15 | UC-05 | SSD-04 | SD-06 | `RvcController` |
 | FR-16 | VS-01 | SSD-03 | SD-01 | `GridSimulator` |
@@ -726,9 +733,9 @@ ctest --test-dir build -C Debug --output-on-failure
 | FR-01, FR-03 | `ControllerMovesForwardWhenPathIsClear` |
 | FR-02 | `StopCleaningReturnsStopAndOff` |
 | FR-04, FR-05 | `FrontInterruptTriggersImmediateAvoidance`, `SimulatorTurnsAfterFrontInterrupt` |
-| FR-07, FR-08 | `FrontInterruptTriggersImmediateAvoidance`, `TurnsTowardOpenSide`, `SimulatorTurnsAfterFrontInterrupt` |
-| FR-09 | `AlternatesWhenBothSidesAreOpen` |
-| FR-10, FR-11 | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsCommandingBackwardWhenBoxedIn`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
-| FR-12, FR-13 | `EscapingIgnoresOpenFrontUntilSideOpens`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
+| FR-07, FR-08 | [R2-변경] `FrontInterruptTriggersImmediateAvoidance`, `RightProbeStartsWhenLeftBlocked`, `SimulatorProbesRightAfterFrontInterrupt` |
+| FR-09 | [R2-삭제] ~~`AlternatesWhenBothSidesAreOpen`~~ |
+| FR-10, FR-11 | [R2-변경] `RightProbeBlockedAlignsBeforeEscaping`, `EscapingBacksUpThenReprobesRight`, `SimulatorRestoresHeadingBeforeBackward`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
+| FR-12, FR-13 | [R2-변경] `EscapingTurnsLeftWhenLeftOpens`, `RightProbeOpenResumesForward`, `SimulatorRepeatsRightProbeAfterBackward` |
 | FR-14, FR-15 | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained`, `SimulatorCleansDustAndLogsCommands`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
 | FR-16, FR-17, FR-18 | [변경] `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsBackingUpUntilSideExitOpens`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns`는 `GridSimulator`와 `SimulatedHardwareAdapter`로 `Rvc` 흐름을 검증한다. |
