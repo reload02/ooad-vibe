@@ -21,7 +21,7 @@
 | FR-15 | UC-05 | SSD-04 | SD-06 | `RvcController` |
 | FR-16 | VS-01 | SSD-03 | SD-01 | `GridSimulator` |
 | FR-17 | VS-01 | SSD-03 | SD-01 | `GridSimulator`, `SimulationResult` |
-| FR-18 | VS-01 | SSD-01 to SSD-05 | SD-01 | `RvcController`, `GridSimulator` |
+| FR-18 | VS-01 | SSD-01 to SSD-05 | SD-01 | [변경] `Rvc`, `RvcHardwareAdapter`, `SimulatedHardwareAdapter`, `GridSimulator` |
 
 ## 2. Requirement to Test Traceability
 
@@ -35,7 +35,7 @@
 | FR-10, FR-11 | `AllBlockedEntersEscapingAndKeepsBackingUp`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsCommandingBackwardWhenBoxedIn` |
 | FR-12, FR-13 | `EscapingIgnoresOpenFrontUntilSideOpens`, `SimulatorKeepsBackingUpUntilSideExitOpens` |
 | FR-14, FR-15 | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained`, `SimulatorCleansDustAndLogsCommands`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
-| FR-16, FR-17, FR-18 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsBackingUpUntilSideExitOpens`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
+| FR-16, FR-17, FR-18 | [변경] `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape`, `SimulatorKeepsBackingUpUntilSideExitOpens`, `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns`는 `GridSimulator`와 `SimulatedHardwareAdapter` 기반으로 `Rvc` 흐름을 검증한다. |
 
 ## 3. 최신 테스트 실행 결과
 

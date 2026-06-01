@@ -8,7 +8,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(rvc_core
     src/GridSimulator.cpp
+    src/Rvc.cpp
     src/RvcController.cpp
+    src/SimulatedHardwareAdapter.cpp
     src/Types.cpp
 )
 
@@ -46,6 +48,7 @@ if(BUILD_TESTING)
 
     add_executable(rvc_tests
         tests/controller_tests.cpp
+        tests/rvc_tests.cpp
         tests/system_tests.cpp
         tests/types_tests.cpp
     )

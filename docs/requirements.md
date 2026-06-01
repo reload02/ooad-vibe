@@ -10,6 +10,9 @@
 - 좌측 센서, 우측 센서, 먼지 센서는 periodic 방식으로 동작한다.
 - 전방, 좌측, 우측이 모두 막힌 경우 RVC는 좌/우 중 한쪽이 열릴 때까지 계속 후진한다.
 - 하드웨어의 상세 제어 설계는 범위 밖이며, 제어 소프트웨어는 추상화된 센서 입력과 동작 명령을 다룬다.
+- [추가] RVC 제어 소프트웨어는 상위 객체 `Rvc`가 `RvcController`와 `RvcHardwareAdapter`를 소유하는 구조로 본다.
+- [추가] `GridSimulator`는 `SimulatedHardwareAdapter`를 통해 테스트용 하드웨어 환경만 제공한다.
+- [삭제] ~~`GridSimulator`가 `RvcController`를 직접 소유하는 구조를 시스템 중심 구조로 보지 않는다.~~
 
 ## 2. Actors
 
@@ -23,6 +26,8 @@
 | Digital Clock | 제어 tick을 제공하는 주기적 시간 소스 |
 | Motor | 이동, 정지, 회전, 후진 명령을 수행하는 하드웨어 |
 | Cleaner | 일반 청소, 강화 청소, 물걸레질 출력을 대표하는 추상 하드웨어 |
+| RvcHardwareAdapter | [추가] 센서 입력과 command 적용을 RVC 상위 객체에 제공하는 추상 adapter |
+| SimulatedHardwareAdapter | [추가] 그리드 기반 검증에서 `RvcHardwareAdapter` 계약을 구현하는 테스트용 adapter |
 
 ## 3. Use Cases
 
@@ -79,11 +84,11 @@
 
 ## 4. Verification Support
 
-시뮬레이터는 RVC의 사용자 또는 센서 중심 유스케이스가 아니라 제어 소프트웨어 구현을 검증하기 위한 지원 기능으로 분리한다.
+[변경] 시뮬레이터는 RVC의 사용자 또는 센서 중심 유스케이스가 아니라 `Rvc`와 `RvcHardwareAdapter` 기반 제어 소프트웨어 구현을 검증하기 위한 지원 기능으로 분리한다.
 
 | ID | Item | Description |
 | --- | --- | --- |
-| VS-01 | CLI simulator scenario execution | 기본 맵 또는 시나리오 맵으로 controller 동작을 실행하고 tick별 sensor/event, command, robot position, direction, cleaning power 로그를 제공한다. |
+| VS-01 | CLI simulator scenario execution | [변경] 기본 맵 또는 시나리오 맵으로 `Rvc`와 `SimulatedHardwareAdapter` 동작을 실행하고 tick별 sensor/event, command, robot position, direction, cleaning power 로그를 제공한다. [삭제] ~~기본 맵 또는 시나리오 맵으로 controller 동작을 실행한다.~~ |
 
 ## 5. Functional Requirements
 
@@ -106,7 +111,7 @@
 | FR-15 | If boost duration expires and no new dust is detected, System shall return cleaner power to normal. | UC-05 |
 | FR-16 | Simulator shall render a grid map with robot, obstacle, dust, and empty cells. | VS-01 |
 | FR-17 | Simulator shall log tick, sensor values, command, robot position, direction, and cleaning power. | VS-01 |
-| FR-18 | Simulator shall use the same controller interface as the production control SW. | VS-01 |
+| FR-18 | [변경] Simulator shall exercise the same `RvcHardwareAdapter` contract as the production control SW. | VS-01 |
 
 ## 6. Non-Functional Requirements
 
@@ -116,7 +121,7 @@
 | NFR-02 | Controller shall be testable through deterministic inputs without real hardware. |
 | NFR-03 | The project shall build with CMake and C++20. |
 | NFR-04 | Unit tests shall be written with GoogleTest. |
-| NFR-05 | System tests shall exercise the controller through the simulator. |
+| NFR-05 | [변경] System tests shall exercise the `Rvc` system through `GridSimulator` and `SimulatedHardwareAdapter`. |
 | NFR-06 | Sensor and actuator abstractions shall allow future sensor changes or additions. |
 | NFR-07 | CLI simulator output shall be human-readable for manual review. |
 | NFR-08 | Core control decisions shall be deterministic for repeatable tests. |
