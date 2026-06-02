@@ -28,6 +28,7 @@ add_executable(rvc_simulator
 target_link_libraries(rvc_simulator PRIVATE rvc_core)
 
 include(CTest)
+add_subdirectory(simulator_rvc_interface)
 
 if(BUILD_TESTING)
     option(RVC_USE_SYSTEM_GTEST "Use an installed GoogleTest package instead of fetching one" OFF)
