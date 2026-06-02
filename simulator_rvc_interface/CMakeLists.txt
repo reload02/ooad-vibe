@@ -33,6 +33,17 @@ target_include_directories(rvc_imported_simulator
 target_link_libraries(rvc_imported_simulator PUBLIC rvc_simulator_interface)
 target_compile_features(rvc_imported_simulator PUBLIC cxx_std_20)
 
+if(MSVC)
+    target_compile_options(rvc_imported_simulator PRIVATE /utf-8)
+endif()
+
+add_executable(rvc_imported_simulator_cli EXCLUDE_FROM_ALL
+    ImportedSimulatorMain.cpp
+)
+
+target_link_libraries(rvc_imported_simulator_cli PRIVATE rvc_imported_simulator)
+target_compile_features(rvc_imported_simulator_cli PRIVATE cxx_std_20)
+
 if(BUILD_TESTING)
     add_executable(rvc_simulator_interface_smoke
         tests/SimulatorInterfaceSmoke.cpp

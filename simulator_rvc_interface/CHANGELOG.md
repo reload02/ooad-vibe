@@ -23,23 +23,13 @@
 ## CMake 연결
 - `rvc_simulator_interface` 라이브러리를 추가해 새 호환 계층을 기본 빌드에 포함했다.
 - `rvc_imported_simulator` 타깃을 `EXCLUDE_FROM_ALL`로 추가해, 기본 빌드는 깨지지 않으면서 새 `Simulator/` 전체 컴파일을 별도로 확인할 수 있게 했다.
+- `rvc_imported_simulator_cli` 타깃을 추가해 새 `Simulator/`의 `RvcSimulator::run()`을 실행할 수 있게 했다.
 - `SimulatorRvcInterfaceSmoke` 테스트를 추가해 전진, 회피, 먼지 Boost, 전원 OFF 흐름을 호환 계층만으로 검증한다.
 
-## 알려진 리스크
-- 현재 새 `Simulator/` 내부 일부 파일에는 닫히지 않은 문자열로 보이는 구문 손상이 있다.
-- 확인된 위치:
-  - `Simulator/RvcSimulator.cpp:414`
-  - `Simulator/RvcSimulator.cpp:416`
-  - `Simulator/SystemTestCases.cpp:125`
-  - `Simulator/SystemTestCases.cpp:129`
-  - `Simulator/SystemTestCases.cpp:139`
-  - `Simulator/SystemTestCases.cpp:143`
-  - `Simulator/SystemTestCases.cpp:145`
-  - `Simulator/SystemTestCases.cpp:166`
-  - `Simulator/SystemTestCases.cpp:213`
-  - `Simulator/SystemTestCases.cpp:237`
-  - `Simulator/SystemTestCases.cpp:242`
-  - `Simulator/SystemTestCases.cpp:253`
-  - `Simulator/SystemTestCases.cpp:264`
-  - `Simulator/SystemTestCases.cpp:274`
-- `Simulator/` 미수정 원칙 때문에 이 문제는 호환 계층에서 고치지 않았다.
+## Simulator 컴파일 오류 수정
+- `Simulator/` 원본 파일은 변경하지 않았다.
+- MSVC가 UTF-8 소스를 CP949로 해석하면서 닫히지 않은 문자열처럼 컴파일하던 문제를 `rvc_imported_simulator` 타깃의 `/utf-8` 옵션으로 해결했다.
+
+## 실행
+- 빌드: `cmake --build build --config Debug --target rvc_imported_simulator_cli`
+- 실행: `.\build\simulator_rvc_interface\Debug\rvc_imported_simulator_cli.exe`
