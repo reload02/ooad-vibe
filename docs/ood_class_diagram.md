@@ -13,10 +13,17 @@
 classDiagram
     class Rvc {
         -RvcController controller
-        -RvcHardwareAdapter hardwareAdapter
+        -unique_ptr~RvcHardwareAdapter~ hardwareAdapter
+        -bool lastFrontObstacleInterrupt
+        -PeriodicSensorData lastPeriodicSensors
+        -Command lastCommand
+        +Rvc(unique_ptr~RvcHardwareAdapter~, ControllerConfig)
         +startCleaning()
         +stopCleaning()
         +tick() Command
+        +lastFrontObstacleInterrupt() bool
+        +lastPeriodicSensors() PeriodicSensorData
+        +lastCommand() Command
     }
 
     class RvcController {
@@ -30,6 +37,10 @@ classDiagram
         +tick(PeriodicSensorData) Command
         +readPeriodicSensors(PeriodicSensorData) SensorSnapshot
         +decideNextCommand(SensorSnapshot) Command
+        +state() ControllerState
+        +rightProbeState() RightProbeState
+        +isRunning() bool
+        +boostTicksRemaining() int
     }
 
     class NavigationPolicy {
@@ -45,6 +56,7 @@ classDiagram
     class CleaningPowerPolicy {
         -int dustBoostTicks
         -int boostTicksRemaining
+        +CleaningPowerPolicy(dustBoostTicks)
         +reset()
         +update(dustDetected) CleaningPower
         +boostTicksRemaining() int
@@ -88,22 +100,34 @@ classDiagram
         -vector~string~ grid
         -Position robot
         -Direction direction
+        -int dustCleaned
+        +SimulatedHardwareAdapter(grid)
         +hasFrontObstacleInterrupt() bool
         +readPeriodicSensors() PeriodicSensorData
         +applyCommand(Command)
         +render() string
+        +dustCleaned() int
+        +remainingDust() int
+        +robotPosition() Position
+        +robotDirection() Direction
     }
 
     class GridSimulator {
-        -SimulatedHardwareAdapter hardwareAdapter
+        -SimulatedHardwareAdapter* hardwareAdapter
         -Rvc rvc
+        -bool started
+        -vector~string~ logs
         +fromLines(lines) GridSimulator
         +loadScenario(path) Scenario
         +defaultMap() vector~string~
         +run(maxTicks, includeFrames) SimulationResult
         +step(tick, includeFrame) bool
         +render() string
+        +dustCleaned() int
         +remainingDust() int
+        +robotPosition() Position
+        +robotDirection() Direction
+        +logs() vector~string~
     }
 
     class Scenario {
@@ -132,6 +156,8 @@ classDiagram
 
     Rvc *-- RvcController
     Rvc *-- RvcHardwareAdapter
+    Rvc --> PeriodicSensorData
+    Rvc --> Command
     RvcHardwareAdapter <|-- SimulatedHardwareAdapter
     SimulatedHardwareAdapter --> PeriodicSensorData
     SimulatedHardwareAdapter --> Command
@@ -144,7 +170,7 @@ classDiagram
     NavigationPolicy --> NavigationDecision
     NavigationPolicy --> SensorSnapshot
     CleaningPowerPolicy --> CleaningPower
-    GridSimulator *-- SimulatedHardwareAdapter
+    GridSimulator --> SimulatedHardwareAdapter
     GridSimulator --> Rvc
     GridSimulator --> Scenario
     GridSimulator --> SimulationResult
