@@ -86,8 +86,26 @@ std::string toString(ControllerState state) {
             return "Cleaning";
         case ControllerState::Avoiding:
             return "Avoiding";
+        case ControllerState::RightProbing:
+            return "RightProbing";
+        case ControllerState::EscapeAligning:
+            return "EscapeAligning";
         case ControllerState::Escaping:
             return "Escaping";
+    }
+    return "Unknown";
+}
+
+std::string toString(RightProbeState state) {
+    switch (state) {
+        case RightProbeState::None:
+            return "None";
+        case RightProbeState::Checking:
+            return "Checking";
+        case RightProbeState::Open:
+            return "Open";
+        case RightProbeState::Blocked:
+            return "Blocked";
     }
     return "Unknown";
 }

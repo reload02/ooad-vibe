@@ -30,7 +30,16 @@ enum class ControllerState {
     Idle,
     Cleaning,
     Avoiding,
+    RightProbing,
+    EscapeAligning,
     Escaping,
+};
+
+enum class RightProbeState {
+    None,
+    Checking,
+    Open,
+    Blocked,
 };
 
 struct Position {
@@ -42,14 +51,13 @@ struct Position {
 
 struct PeriodicSensorData {
     bool leftObstacle{false};
-    bool rightObstacle{false};
     bool dustDetected{false};
 };
 
 struct SensorSnapshot {
     bool frontObstacle{false};
     bool leftObstacle{false};
-    bool rightObstacle{false};
+    RightProbeState rightProbe{RightProbeState::None};
     bool dustDetected{false};
 };
 
@@ -66,5 +74,6 @@ struct Command {
 [[nodiscard]] std::string toString(Motion motion);
 [[nodiscard]] std::string toString(CleaningPower power);
 [[nodiscard]] std::string toString(ControllerState state);
+[[nodiscard]] std::string toString(RightProbeState state);
 
 }  // namespace rvc

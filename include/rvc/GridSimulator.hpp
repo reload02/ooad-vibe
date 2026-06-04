@@ -1,9 +1,10 @@
 #pragma once
 
-#include "rvc/RvcController.hpp"
+#include "rvc/Rvc.hpp"
+#include "rvc/SimulatedHardwareAdapter.hpp"
 
 #include <filesystem>
-#include <optional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -39,26 +40,15 @@ public:
     [[nodiscard]] const std::vector<std::string>& logs() const;
 
 private:
-    explicit GridSimulator(std::vector<std::string> grid);
+    explicit GridSimulator(std::unique_ptr<SimulatedHardwareAdapter> hardwareAdapter);
 
-    [[nodiscard]] PeriodicSensorData samplePeriodicSensors() const;
-    [[nodiscard]] bool isObstacle(Position position) const;
-    [[nodiscard]] bool hasDust(Position position) const;
-    [[nodiscard]] Position adjacent(Position origin, Direction direction) const;
-    [[nodiscard]] Position forwardPosition() const;
-    [[nodiscard]] Position backwardPosition() const;
     [[nodiscard]] std::string makeLogLine(int tick, bool frontObstacle, const PeriodicSensorData& sensors,
                                           const Command& command) const;
 
-    void cleanCurrentCell(const Command& command);
-    void applyMotion(Motion motion);
     void ensureStarted();
 
-    std::vector<std::string> grid_;
-    Position robot_{};
-    Direction direction_{Direction::North};
-    RvcController controller_;
-    int dustCleaned_{0};
+    SimulatedHardwareAdapter* hardwareAdapter_;
+    Rvc rvc_;
     bool started_{false};
     std::vector<std::string> logs_;
 };

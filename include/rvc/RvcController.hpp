@@ -21,19 +21,19 @@ public:
     [[nodiscard]] Command decideNextCommand(const SensorSnapshot& snapshot);
 
     [[nodiscard]] ControllerState state() const;
+    [[nodiscard]] RightProbeState rightProbeState() const;
     [[nodiscard]] bool isRunning() const;
     [[nodiscard]] int boostTicksRemaining() const;
 
 private:
     [[nodiscard]] CleaningPower updateCleaningPower(bool dustDetected);
-    [[nodiscard]] Motion chooseOpenSideTurn(bool leftObstacle, bool rightObstacle);
     [[nodiscard]] Command makeCommand(Motion motion, CleaningPower power, std::string reason) const;
 
     ControllerConfig config_;
     ControllerState state_{ControllerState::Idle};
+    RightProbeState rightProbe_{RightProbeState::None};
     bool running_{false};
     bool frontInterruptPending_{false};
-    bool preferLeftTurn_{true};
     int boostTicksRemaining_{0};
 };
 

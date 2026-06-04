@@ -8,6 +8,7 @@ using rvc::CleaningPower;
 using rvc::ControllerState;
 using rvc::Direction;
 using rvc::Motion;
+using rvc::RightProbeState;
 
 TEST(RvcTypesTest, TurnLeftCyclesThroughAllDirections) {
     EXPECT_EQ(rvc::turnLeft(Direction::North), Direction::West);
@@ -50,7 +51,14 @@ TEST(RvcTypesTest, StringConversionsExposeStableLogNames) {
     EXPECT_EQ(rvc::toString(ControllerState::Idle), "Idle");
     EXPECT_EQ(rvc::toString(ControllerState::Cleaning), "Cleaning");
     EXPECT_EQ(rvc::toString(ControllerState::Avoiding), "Avoiding");
+    EXPECT_EQ(rvc::toString(ControllerState::RightProbing), "RightProbing");
+    EXPECT_EQ(rvc::toString(ControllerState::EscapeAligning), "EscapeAligning");
     EXPECT_EQ(rvc::toString(ControllerState::Escaping), "Escaping");
+
+    EXPECT_EQ(rvc::toString(RightProbeState::None), "None");
+    EXPECT_EQ(rvc::toString(RightProbeState::Checking), "Checking");
+    EXPECT_EQ(rvc::toString(RightProbeState::Open), "Open");
+    EXPECT_EQ(rvc::toString(RightProbeState::Blocked), "Blocked");
 }
 
 }  // namespace

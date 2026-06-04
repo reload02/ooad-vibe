@@ -8,7 +8,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(rvc_core
     src/GridSimulator.cpp
+    src/Rvc.cpp
     src/RvcController.cpp
+    src/SimulatedHardwareAdapter.cpp
     src/Types.cpp
 )
 
@@ -26,6 +28,7 @@ add_executable(rvc_simulator
 target_link_libraries(rvc_simulator PRIVATE rvc_core)
 
 include(CTest)
+add_subdirectory(simulator_rvc_interface)
 
 if(BUILD_TESTING)
     option(RVC_USE_SYSTEM_GTEST "Use an installed GoogleTest package instead of fetching one" OFF)
@@ -46,6 +49,7 @@ if(BUILD_TESTING)
 
     add_executable(rvc_tests
         tests/controller_tests.cpp
+        tests/rvc_tests.cpp
         tests/system_tests.cpp
         tests/types_tests.cpp
     )

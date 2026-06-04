@@ -7,15 +7,15 @@
 | 파일 | 관련 항목 | 의도 |
 | --- | --- | --- |
 | `clear_corridor_forward.rvc` | UC-01, FR-01, FR-03, FR-17 | 장애물이 없을 때 cleaner normal 상태로 계속 전진 청소하는 기본 흐름 |
-| `front_left_only_open.rvc` | UC-03, FR-04, FR-05, FR-07, FR-16 | 전방 인터럽트 후 좌측만 열려 있을 때 cleaner off 상태로 좌회전 |
-| `front_right_only_open.rvc` | UC-03, FR-04, FR-05, FR-08, FR-16 | 전방 인터럽트 후 우측만 열려 있을 때 cleaner off 상태로 우회전 |
-| `front_both_sides_open.rvc` | UC-03, FR-09, FR-16, NFR-08 | 좌우가 모두 열려 있을 때 cleaner off 상태로 결정적 회전 정책 확인 |
-| `repeated_front_interrupts_alternation.rvc` | UC-03, FR-09, FR-16, NFR-08 | 전방 인터럽트가 반복될 때 좌우 선택 정책과 회전 중 cleaner off가 흔들리지 않는지 확인 |
-| `long_escape_right_exit_extreme.rvc` | UC-04, FR-10, FR-11, FR-12, FR-13, FR-16 | 긴 후진 탈출 끝에 우측 탈출구가 열릴 때 후진/회전 중 cleaner off 확인 |
+| `front_left_only_open.rvc` | UC-03, FR-04, FR-05, FR-07, FR-16 | [R2-변경] 전방 인터럽트 후 좌측이 열려 있을 때 cleaner off 상태로 좌회전 |
+| `front_right_only_open.rvc` | UC-03, FR-04, FR-05, FR-08, FR-16 | [R2-변경] 좌측이 막힌 뒤 `TurnRight`로 우측을 탐색하고 전방 센서가 clear이면 전진 재개 |
+| `front_both_sides_open.rvc` | UC-03, FR-09, FR-16, NFR-08 | [R2-삭제] ~~좌우가 모두 열려 있을 때 cleaner off 상태로 결정적 회전 정책 확인~~ |
+| `repeated_front_interrupts_alternation.rvc` | UC-03, FR-09, FR-16, NFR-08 | [R2-삭제] ~~전방 인터럽트가 반복될 때 좌우 선택 정책과 회전 중 cleaner off가 흔들리지 않는지 확인~~ |
+| `long_escape_right_exit_extreme.rvc` | UC-04, FR-10, FR-11, FR-12, FR-13, FR-16 | [R2-변경] 긴 후진 탈출 중 매 후진 후 우측 탐색을 반복하고 우측 탐색 open 시 전진 재개 |
 | `long_escape_left_exit_extreme.rvc` | UC-04, FR-10, FR-11, FR-12, FR-13, FR-16 | 긴 후진 탈출 끝에 좌측 탈출구가 열릴 때 후진/회전 중 cleaner off 확인 |
 | `sealed_box_extreme.rvc` | UC-04, FR-10, FR-11, FR-16 | 완전 고립 상태에서 cleaner off 후진 명령은 유지되지만 위치가 유지되는지 확인 |
-| `front_clears_but_sides_still_blocked.rvc` | UC-04, FR-11, FR-12, FR-16 | Escaping 중 전방이 열려 보여도 좌우가 막히면 cleaner off 후진을 유지하는 조건 |
-| `narrow_tunnel_sides_blocked_front_clear.rvc` | UC-01, UC-03, FR-03, FR-06 | 좌우 periodic 센서가 막혀도 전방이 열려 있으면 전진해야 하는 조건 |
+| `front_clears_but_sides_still_blocked.rvc` | UC-04, FR-11, FR-12, FR-16 | [R2-변경] Escaping 중 전방이 열려 보여도 좌측이 막히면 우측 탐색 정책에 따라 판단하는 조건 |
+| `narrow_tunnel_sides_blocked_front_clear.rvc` | UC-01, UC-03, FR-03, FR-06 | [R2-변경] 좌측 periodic 센서가 막혀도 전방이 열려 있으면 전진해야 하는 조건 |
 | `dust_trail_boost_refresh.rvc` | UC-05, FR-14, FR-15, FR-17 | 먼지가 반복 감지될 때 전진 중 boost 유지 시간이 갱신되는지 확인 |
 | `dust_before_dead_end_escape.rvc` | UC-04, UC-05, FR-10, FR-11, FR-14, FR-16, FR-18 | 먼지 boost와 막다른 곳 탈출이 겹칠 때 회피/탈출 중 cleaner off가 boost보다 우선하는 복합 상황 |
 | `dense_dust_maze_extreme.rvc` | UC-03, UC-05, UC-06, FR-04, FR-14, FR-16, FR-18, FR-19, FR-20 | 장애물과 먼지가 조밀할 때 cleaner off와 boost 우선순위가 함께 나타나는 복합 지도 |
@@ -38,9 +38,10 @@
 
 | 위험 지점 | 관련 요구사항 | 시나리오 |
 | --- | --- | --- |
-| 전방 interrupt와 periodic 좌우 센서 판단 순서가 뒤섞임 | FR-04, FR-05, FR-06 | `front_left_only_open.rvc`, `front_right_only_open.rvc` |
-| 좌우가 모두 열린 경우 회전 선택이 비결정적으로 바뀜 | FR-09, NFR-08 | `front_both_sides_open.rvc`, `repeated_front_interrupts_alternation.rvc` |
-| Escaping 중 전방이 열린 것만 보고 탈출했다고 오판 | FR-11, FR-12 | `front_clears_but_sides_still_blocked.rvc` |
+| 전방 interrupt와 periodic 좌측/먼지 센서 판단 순서가 뒤섞임 | FR-04, FR-05, FR-06 | `front_left_only_open.rvc`, `front_right_only_open.rvc` |
+| [R2-삭제] ~~좌우가 모두 열린 경우 회전 선택이 비결정적으로 바뀜~~ | ~~FR-09, NFR-08~~ | ~~`front_both_sides_open.rvc`, `repeated_front_interrupts_alternation.rvc`~~ |
+| 우측 탐색 실패 후 원래 진행 방향을 복구하지 않고 후진함 | FR-10, FR-11 | `front_right_only_open.rvc`, `long_escape_right_exit_extreme.rvc` |
+| Escaping 중 우측 탐색 open을 놓치거나 전방 open만 보고 방향을 오판 | FR-11, FR-12 | `front_clears_but_sides_still_blocked.rvc`, `long_escape_right_exit_extreme.rvc` |
 | 후진 명령이 벽을 뚫고 위치를 이동시킴 | FR-10, FR-11, FR-19 | `sealed_box_extreme.rvc` |
 | 회피/탈출 이동 중 cleaner가 계속 켜짐 | FR-16 | `front_left_only_open.rvc`, `front_right_only_open.rvc`, `long_escape_right_exit_extreme.rvc`, `long_escape_left_exit_extreme.rvc` |
 | dust boost 중 회피/탈출에서 boost가 off보다 우선됨 | FR-18 | `dust_before_dead_end_escape.rvc`, `dense_dust_maze_extreme.rvc` |
