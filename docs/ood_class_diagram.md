@@ -18,18 +18,39 @@ classDiagram
     }
 
     class RvcController {
-        -ControllerConfig config
-        -ControllerState state
+        -NavigationPolicy navigation
+        -CleaningPowerPolicy cleaningPower
         -bool running
         -bool frontInterruptPending
-        -RightProbeState rightProbe
-        -int boostTicksRemaining
         +startCleaning()
         +stopCleaning()
         +onFrontObstacleInterrupt()
         +tick(PeriodicSensorData) Command
         +readPeriodicSensors(PeriodicSensorData) SensorSnapshot
         +decideNextCommand(SensorSnapshot) Command
+    }
+
+    class NavigationPolicy {
+        -ControllerState state
+        -RightProbeState rightProbe
+        +startCleaning()
+        +stopCleaning()
+        +decide(SensorSnapshot) NavigationDecision
+        +state() ControllerState
+        +rightProbeState() RightProbeState
+    }
+
+    class CleaningPowerPolicy {
+        -int dustBoostTicks
+        -int boostTicksRemaining
+        +reset()
+        +update(dustDetected) CleaningPower
+        +boostTicksRemaining() int
+    }
+
+    class NavigationDecision {
+        +Motion motion
+        +string reason
     }
 
     class ControllerConfig {
@@ -113,9 +134,14 @@ classDiagram
     SimulatedHardwareAdapter --> PeriodicSensorData
     SimulatedHardwareAdapter --> Command
     RvcController --> ControllerConfig
+    RvcController *-- NavigationPolicy
+    RvcController *-- CleaningPowerPolicy
     RvcController --> PeriodicSensorData
     RvcController --> SensorSnapshot
     RvcController --> Command
+    NavigationPolicy --> NavigationDecision
+    NavigationPolicy --> SensorSnapshot
+    CleaningPowerPolicy --> CleaningPower
     GridSimulator *-- SimulatedHardwareAdapter
     GridSimulator --> Rvc
     GridSimulator --> Scenario
@@ -127,7 +153,10 @@ classDiagram
 | Class | Responsibility |
 | --- | --- |
 | `Rvc` | [추가] RVC 상위 시스템 객체로서 `RvcController`와 `RvcHardwareAdapter`를 소유하고, 제어 tick에서 sensor 입력 수집, controller 호출, command 적용 순서를 조율한다. |
-| `RvcController` | [변경] 하드웨어나 시뮬레이터를 소유하지 않고, sensor snapshot과 핵심 제어 규칙에 따라 command를 결정한다. |
+| `RvcController` | [변경] 하드웨어나 시뮬레이터를 소유하지 않고, 실행 상태와 interrupt 소비를 조율하며 `NavigationPolicy`와 `CleaningPowerPolicy` 결과를 조합해 command를 반환한다. |
+| `NavigationPolicy` | [추가] 전방/좌측 장애물과 우측 탐색 상태를 기반으로 다음 motion과 회피/탈출 상태 전이를 결정한다. |
+| `CleaningPowerPolicy` | [추가] 먼지 감지 후 boost 유지 tick을 관리하고 motion 판단과 독립적으로 cleaner power 후보를 결정한다. |
+| `NavigationDecision` | [추가] navigation 판단 결과인 motion과 판단 이유를 담는다. |
 | `ControllerConfig` | boost duration 같은 제어 정책 값을 제공한다. |
 | `PeriodicSensorData` | [R2-변경] 좌측, 먼지 periodic sensor 값을 전달한다. [R2-삭제] ~~우측 periodic sensor 값을 전달한다.~~ |
 | `SensorSnapshot` | [R2-변경] pending front interrupt, 좌측/먼지 periodic sensor 값, 우측 탐색 결과를 결합한 판단 입력이다. |
@@ -142,7 +171,7 @@ classDiagram
 
 | Principle | Application |
 | --- | --- |
-| SRP | [변경] `RvcController`는 제어 결정만 담당하고, `Rvc`는 controller와 hardware adapter 사이의 실행 흐름만 조율하며, `GridSimulator`는 검증 환경 제공만 담당한다. |
+| SRP | [변경] `RvcController`는 tick 실행과 command 조합을 담당하고, 방향/회피 상태 전이는 `NavigationPolicy`, 먼지 boost 예산은 `CleaningPowerPolicy`, 하드웨어 흐름은 `Rvc`, 검증 환경은 `GridSimulator`가 담당한다. |
 | OCP | [R2-변경] sensor 입력은 `PeriodicSensorData`, interrupt API, 우측 탐색 상태로 추상화되어 sensor 변경 시 controller 확장이 가능하다. |
 | LSP | [변경] `SimulatedHardwareAdapter`와 실제 하드웨어 adapter는 같은 `RvcHardwareAdapter` 계약과 `Command` 의미를 따르므로 대체 가능하다. |
 | ISP | controller의 public interface는 시작, 중지, interrupt, tick, 판단에 필요한 작은 operation으로 분리된다. |
@@ -158,7 +187,7 @@ classDiagram
 - [추가] `GridSimulator`는 `SimulatedHardwareAdapter`를 구성해 테스트용 지도, sensor/event, command 적용 결과를 제공한다.
 - [삭제] ~~`GridSimulator`가 `RvcController`를 직접 소유하고 controller command를 직접 적용한다.~~
 - `readPeriodicSensors()`는 pending front interrupt와 periodic 값을 결합하여 `SensorSnapshot`을 만든다.
-- `decideNextCommand()`는 단일 판단 지점으로 두어 테스트를 쉽게 한다.
+- `decideNextCommand()`는 `NavigationPolicy`의 motion 판단과 `CleaningPowerPolicy`의 cleaner power 판단을 조합하는 지점으로 두어 테스트를 쉽게 한다.
 - [R2-변경] `Escaping` 상태에서는 `Backward` 1회 후 좌측이 계속 막혀 있으면 우측 탐색을 반복한다. 우측 탐색 실패 후에는 원래 진행 방향을 복구한 뒤 후진한다.
 - cleaner output 정책은 motion이 우선한다. 회피/탈출 이동 중에는 dust boost 상태가 남아 있어도 `Off`가 command에 기록되고, 전진 청소 재개 시 남은 boost 상태에 따라 `Boost` 또는 `Normal`을 기록한다.
 - PDF DFD Level 0의 `Direction`, `Clean`, `Tick`은 각각 `Command.motion`, `Command.cleaningPower`, `tick(PeriodicSensorData)` 설계 요소로 대응된다.

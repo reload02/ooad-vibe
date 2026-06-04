@@ -4,21 +4,33 @@
 
 namespace rvc {
 
-RvcController::RvcController(ControllerConfig config) : config_(config) {}
+namespace {
+
+[[nodiscard]] Command makeCommand(Motion motion, CleaningPower power, std::string reason) {
+    const CleaningPower outputPower = motion == Motion::Forward ? power : CleaningPower::Off;
+
+    return Command{
+        .motion = motion,
+        .cleaningPower = outputPower,
+        .reason = std::move(reason),
+    };
+}
+
+}  // namespace
+
+RvcController::RvcController(ControllerConfig config) : cleaningPower_(config.dustBoostTicks) {}
 
 void RvcController::startCleaning() {
     running_ = true;
-    state_ = ControllerState::Cleaning;
-    rightProbe_ = RightProbeState::None;
+    navigation_.startCleaning();
     frontInterruptPending_ = false;
 }
 
 void RvcController::stopCleaning() {
     running_ = false;
-    state_ = ControllerState::Idle;
-    rightProbe_ = RightProbeState::None;
+    navigation_.stopCleaning();
     frontInterruptPending_ = false;
-    boostTicksRemaining_ = 0;
+    cleaningPower_.reset();
 }
 
 void RvcController::onFrontObstacleInterrupt() {
@@ -42,7 +54,7 @@ SensorSnapshot RvcController::readPeriodicSensors(const PeriodicSensorData& peri
     return SensorSnapshot{
         .frontObstacle = frontInterruptPending_,
         .leftObstacle = periodicSensors.leftObstacle,
-        .rightProbe = rightProbe_,
+        .rightProbe = navigation_.rightProbeState(),
         .dustDetected = periodicSensors.dustDetected,
     };
 }
@@ -52,61 +64,17 @@ Command RvcController::decideNextCommand(const SensorSnapshot& snapshot) {
         return makeCommand(Motion::Stop, CleaningPower::Off, "controller idle");
     }
 
-    const CleaningPower power = updateCleaningPower(snapshot.dustDetected);
-
-    if (state_ == ControllerState::RightProbing) {
-        if (snapshot.frontObstacle) {
-            state_ = ControllerState::EscapeAligning;
-            rightProbe_ = RightProbeState::Blocked;
-            return makeCommand(Motion::TurnLeft, power, "right probe blocked: restore original heading");
-        }
-
-        state_ = ControllerState::Cleaning;
-        rightProbe_ = RightProbeState::Open;
-        return makeCommand(Motion::Forward, power, "right probe open: resume forward cleaning");
-    }
-
-    if (state_ == ControllerState::EscapeAligning) {
-        state_ = ControllerState::Escaping;
-        rightProbe_ = RightProbeState::Blocked;
-        return makeCommand(Motion::Backward, power, "right probe blocked: original heading restored, backing up");
-    }
-
-    if (state_ == ControllerState::Escaping) {
-        if (!snapshot.leftObstacle) {
-            state_ = ControllerState::Avoiding;
-            rightProbe_ = RightProbeState::None;
-            return makeCommand(Motion::TurnLeft, power, "escaping: left opened, turn toward exit");
-        }
-
-        state_ = ControllerState::RightProbing;
-        rightProbe_ = RightProbeState::Checking;
-        return makeCommand(Motion::TurnRight, power, "escaping: left blocked, probe right");
-    }
-
-    if (!snapshot.frontObstacle) {
-        state_ = ControllerState::Cleaning;
-        rightProbe_ = RightProbeState::None;
-        return makeCommand(Motion::Forward, power, "front clear: forward cleaning");
-    }
-
-    if (!snapshot.leftObstacle) {
-        state_ = ControllerState::Avoiding;
-        rightProbe_ = RightProbeState::None;
-        return makeCommand(Motion::TurnLeft, power, "front interrupt: left open, turn left");
-    }
-
-    state_ = ControllerState::RightProbing;
-    rightProbe_ = RightProbeState::Checking;
-    return makeCommand(Motion::TurnRight, power, "front interrupt: left blocked, probe right");
+    const CleaningPower power = cleaningPower_.update(snapshot.dustDetected);
+    const NavigationDecision navigationDecision = navigation_.decide(snapshot);
+    return makeCommand(navigationDecision.motion, power, navigationDecision.reason);
 }
 
 ControllerState RvcController::state() const {
-    return state_;
+    return navigation_.state();
 }
 
 RightProbeState RvcController::rightProbeState() const {
-    return rightProbe_;
+    return navigation_.rightProbeState();
 }
 
 bool RvcController::isRunning() const {
@@ -114,27 +82,7 @@ bool RvcController::isRunning() const {
 }
 
 int RvcController::boostTicksRemaining() const {
-    return boostTicksRemaining_;
-}
-
-CleaningPower RvcController::updateCleaningPower(bool dustDetected) {
-    if (dustDetected) {
-        boostTicksRemaining_ = config_.dustBoostTicks;
-    } else if (boostTicksRemaining_ > 0) {
-        --boostTicksRemaining_;
-    }
-
-    return boostTicksRemaining_ > 0 ? CleaningPower::Boost : CleaningPower::Normal;
-}
-
-Command RvcController::makeCommand(Motion motion, CleaningPower power, std::string reason) const {
-    const CleaningPower outputPower = motion == Motion::Forward ? power : CleaningPower::Off;
-
-    return Command{
-        .motion = motion,
-        .cleaningPower = outputPower,
-        .reason = std::move(reason),
-    };
+    return cleaningPower_.boostTicksRemaining();
 }
 
 }  // namespace rvc

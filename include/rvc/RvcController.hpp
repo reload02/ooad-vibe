@@ -1,5 +1,7 @@
 #pragma once
 
+#include "rvc/CleaningPowerPolicy.hpp"
+#include "rvc/NavigationPolicy.hpp"
 #include "rvc/Types.hpp"
 
 namespace rvc {
@@ -26,15 +28,10 @@ public:
     [[nodiscard]] int boostTicksRemaining() const;
 
 private:
-    [[nodiscard]] CleaningPower updateCleaningPower(bool dustDetected);
-    [[nodiscard]] Command makeCommand(Motion motion, CleaningPower power, std::string reason) const;
-
-    ControllerConfig config_;
-    ControllerState state_{ControllerState::Idle};
-    RightProbeState rightProbe_{RightProbeState::None};
+    NavigationPolicy navigation_;
+    CleaningPowerPolicy cleaningPower_;
     bool running_{false};
     bool frontInterruptPending_{false};
-    int boostTicksRemaining_{0};
 };
 
 }  // namespace rvc
