@@ -1,0 +1,238 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RVC 커버리지 분석지</title>
+<style>
+:root{--bg:#f7f8fa;--panel:#ffffff;--ink:#1f2937;--muted:#64748b;--line:#d9e0e8;--green:#15803d;--amber:#b45309;--red:#b91c1c;--blue:#2563eb;--code:#0f172a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Segoe UI,Malgun Gothic,Apple SD Gothic Neo,sans-serif;line-height:1.55}header{background:#fff;border-bottom:1px solid var(--line)}.wrap{max-width:1180px;margin:0 auto;padding:28px 24px}h1{margin:0 0 8px;font-size:30px;letter-spacing:0}h2{margin:34px 0 14px;font-size:21px}h3{margin:24px 0 8px;font-size:17px}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:20px}.metric{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}.metric strong{display:block;font-size:28px}.metric span{color:var(--muted);font-size:13px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;margin-top:14px}table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#eef2f7;font-size:13px;color:#334155}tr:last-child td{border-bottom:0}.num{text-align:right;font-variant-numeric:tabular-nums}.bar{height:9px;background:#e2e8f0;border-radius:999px;overflow:hidden;min-width:120px}.bar span{display:block;height:100%;background:var(--blue)}.rate-good{color:var(--green);font-weight:700}.rate-mid{color:var(--amber);font-weight:700}.rate-low{color:var(--red);font-weight:700}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:12px;background:#f8fafc;color:#334155}.code{font-family:Cascadia Mono,Consolas,monospace;font-size:12px;background:var(--code);color:#dbeafe;border-radius:8px;overflow:auto;border:1px solid #111827}.code-line{display:grid;grid-template-columns:54px 44px 1fr;gap:10px;padding:2px 10px;white-space:pre}.code-line.hit{background:rgba(22,163,74,.16)}.code-line.miss{background:rgba(239,68,68,.24)}.code-line.neutral{color:#94a3b8}.ln{color:#93c5fd;text-align:right}.hits{text-align:right;color:#cbd5e1}.miss .hits{color:#fecaca}.note{border-left:4px solid var(--blue);padding:10px 12px;background:#eff6ff;border-radius:4px}.rec{display:grid;grid-template-columns:180px 1fr 1.2fr;gap:12px;border-top:1px solid var(--line);padding:12px 0}.rec:first-child{border-top:0}@media(max-width:760px){.grid{grid-template-columns:1fr 1fr}.rec{grid-template-columns:1fr}.wrap{padding:22px 16px}table{font-size:13px}}
+</style>
+</head><body>
+<header><div class="wrap">
+<h1>RVC 커버리지 분석지</h1>
+<div class="muted">생성 시각: 2026-06-04 12:37:41 +09:00 · 기준 XML: docs/coverage.merged.cobertura.xml · 범위: 프로젝트 소스(src/include/simulator_rvc_interface), 외부 라이브러리 제외</div>
+<div class="grid">
+<div class="metric"><strong>89.2%</strong><span>프로젝트 라인 커버리지</span></div>
+<div class="metric"><strong>406 / 455</strong><span>커버된 라인 / 실행 가능 라인</span></div>
+<div class="metric"><strong>61</strong><span>GoogleTest 실행 건수</span></div>
+<div class="metric"><strong>0</strong><span>실패 테스트</span></div>
+</div></div></header>
+<main class="wrap">
+<section class="panel note">원본 Cobertura 전체 수치는 GoogleTest 및 표준 라이브러리 코드까지 포함되어 41.1%로 표시됩니다. 이 분석지는 제품 코드만 필터링한 89.2%를 주 지표로 사용합니다.</section>
+<h2>파일별 요약</h2><table><thead><tr><th>파일</th><th class="num">커버리지</th><th>분포</th><th class="num">커버</th><th class="num">미커버</th><th>미커버 라인</th></tr></thead><tbody>
+<tr><td><code>src/main.cpp</code></td><td class="num rate-low">66.7%</td><td><div class="bar"><span style="width:67%"></span></div></td><td class="num">28 / 42</td><td class="num">14</td><td>9-11, 25-26, 45-47, 63, 79, 83-86</td></tr>
+<tr><td><code>src/GridSimulator.cpp</code></td><td class="num rate-mid">83.8%</td><td><div class="bar"><span style="width:84%"></span></div></td><td class="num">67 / 80</td><td class="num">13</td><td>26, 107-109, 115-117, 119-121, 123-125</td></tr>
+<tr><td><code>src/Rvc.cpp</code></td><td class="num rate-mid">85.7%</td><td><div class="bar"><span style="width:86%"></span></div></td><td class="num">24 / 28</td><td class="num">4</td><td>11, 43-45</td></tr>
+<tr><td><code>src/Types.cpp</code></td><td class="num rate-mid">88.7%</td><td><div class="bar"><span style="width:89%"></span></div></td><td class="num">55 / 62</td><td class="num">7</td><td>16, 30, 48, 66, 78, 96, 110</td></tr>
+<tr><td><code>src/SimulatedHardwareAdapter.cpp</code></td><td class="num rate-good">91.6%</td><td><div class="bar"><span style="width:92%"></span></div></td><td class="num">109 / 119</td><td class="num">10</td><td>14, 18, 20, 22, 32, 36, 44, 132, 136, 153</td></tr>
+<tr><td><code>src/RvcController.cpp</code></td><td class="num rate-good">98%</td><td><div class="bar"><span style="width:98%"></span></div></td><td class="num">49 / 50</td><td class="num">1</td><td>64</td></tr>
+<tr><td><code>include/rvc/CleaningPowerPolicy.hpp</code></td><td class="num rate-good">100%</td><td><div class="bar"><span style="width:100%"></span></div></td><td class="num">1 / 1</td><td class="num">0</td><td>-</td></tr>
+<tr><td><code>include/rvc/GridSimulator.hpp</code></td><td class="num rate-good">100%</td><td><div class="bar"><span style="width:100%"></span></div></td><td class="num">1 / 1</td><td class="num">0</td><td>-</td></tr>
+<tr><td><code>include/rvc/Rvc.hpp</code></td><td class="num rate-good">100%</td><td><div class="bar"><span style="width:100%"></span></div></td><td class="num">3 / 3</td><td class="num">0</td><td>-</td></tr>
+<tr><td><code>include/rvc/RvcController.hpp</code></td><td class="num rate-good">100%</td><td><div class="bar"><span style="width:100%"></span></div></td><td class="num">2 / 2</td><td class="num">0</td><td>-</td></tr>
+<tr><td><code>include/rvc/RvcHardwareAdapter.hpp</code></td><td class="num rate-good">100%</td><td><div class="bar"><span style="width:100%"></span></div></td><td class="num">1 / 1</td><td class="num">0</td><td>-</td></tr>
+<tr><td><code>include/rvc/SimulatedHardwareAdapter.hpp</code></td><td class="num rate-good">100%</td><td><div class="bar"><span style="width:100%"></span></div></td><td class="num">3 / 3</td><td class="num">0</td><td>-</td></tr>
+<tr><td><code>src/CleaningPowerPolicy.cpp</code></td><td class="num rate-good">100%</td><td><div class="bar"><span style="width:100%"></span></div></td><td class="num">14 / 14</td><td class="num">0</td><td>-</td></tr>
+<tr><td><code>src/NavigationPolicy.cpp</code></td><td class="num rate-good">100%</td><td><div class="bar"><span style="width:100%"></span></div></td><td class="num">49 / 49</td><td class="num">0</td><td>-</td></tr>
+</tbody></table>
+<h2>주요 해석</h2><div class="panel">
+<div class="rec"><div><span class="pill">CLI 옵션/오류 경로</span></div><div>src/main.cpp의 --help, unknown/incomplete argument, 예외 처리, quiet-map=false 출력 경로가 미커버입니다.</div><div><strong>권장:</strong> CLI smoke test를 3-4개 추가해 정상 출력뿐 아니라 도움말/오류 반환 코드를 검증합니다.</div></div>
+<div class="rec"><div><span class="pill">시나리오 로딩 실패</span></div><div>GridSimulator::loadScenario의 파일 열기 실패 분기가 미커버입니다.</div><div><strong>권장:</strong> 존재하지 않는 .rvc 경로를 loadScenario에 전달하는 단위 테스트를 추가합니다.</div></div>
+<div class="rec"><div><span class="pill">방어적 accessor/null 경로</span></div><div>Rvc null adapter, GridSimulator accessor, Rvc::lastCommand 같은 낮은 위험 라인이 남아 있습니다.</div><div><strong>권장:</strong> 공개 API 안정성을 문서화하려면 accessor smoke test와 null adapter 예외 테스트를 추가합니다.</div></div>
+<div class="rec"><div><span class="pill">enum fallback/default arm</span></div><div>Types.cpp와 SimulatedHardwareAdapter.cpp의 Unknown/default fallback은 정상 enum 값으로는 거의 도달하지 않습니다.</div><div><strong>권장:</strong> 필요하면 invalid enum cast 기반 방어 테스트를 추가하되, 요구사항 커버리지에는 낮은 우선순위로 둡니다.</div></div>
+</div>
+<h2>미커버 라인 상세</h2>
+<section class="panel"><h3><code>src/main.cpp</code> <span class="muted">66.7% · 미커버 9-11, 25-26, 45-47, 63, 79, 83-86</span></h3>
+<div class="code" role="table" aria-label="uncovered source lines">
+<div class="code-line neutral"><span class="ln">7</span><span class="hits"></span><span>namespace {</span></div>
+<div class="code-line neutral"><span class="ln">8</span><span class="hits"></span><span></span></div>
+<div class="code-line miss"><span class="ln">9</span><span class="hits">0</span><span>void printUsage(const char* executable) {</span></div>
+<div class="code-line miss"><span class="ln">10</span><span class="hits">0</span><span>    std::cout &lt;&lt; &quot;Usage: &quot; &lt;&lt; executable &lt;&lt; &quot; [--ticks N] [--scenario FILE] [--quiet-map]\n&quot;;</span></div>
+<div class="code-line miss"><span class="ln">11</span><span class="hits">0</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">12</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">13</span><span class="hits"></span><span>}  // namespace</span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">23</span><span class="hits">1</span><span>            const std::string arg = argv[index];</span></div>
+<div class="code-line hit"><span class="ln">24</span><span class="hits">1</span><span>            if (arg == &quot;--help&quot; || arg == &quot;-h&quot;) {</span></div>
+<div class="code-line miss"><span class="ln">25</span><span class="hits">0</span><span>                printUsage(argv[0]);</span></div>
+<div class="code-line miss"><span class="ln">26</span><span class="hits">0</span><span>                return 0;</span></div>
+<div class="code-line neutral"><span class="ln">27</span><span class="hits"></span><span>            }</span></div>
+<div class="code-line neutral"><span class="ln">28</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line neutral"><span class="ln">43</span><span class="hits"></span><span>            }</span></div>
+<div class="code-line neutral"><span class="ln">44</span><span class="hits"></span><span></span></div>
+<div class="code-line miss"><span class="ln">45</span><span class="hits">0</span><span>            std::cerr &lt;&lt; &quot;Unknown or incomplete argument: &quot; &lt;&lt; arg &lt;&lt; &#39;\n&#39;;</span></div>
+<div class="code-line miss"><span class="ln">46</span><span class="hits">0</span><span>            printUsage(argv[0]);</span></div>
+<div class="code-line miss"><span class="ln">47</span><span class="hits">0</span><span>            return 2;</span></div>
+<div class="code-line neutral"><span class="ln">48</span><span class="hits"></span><span>        }</span></div>
+<div class="code-line neutral"><span class="ln">49</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line neutral"><span class="ln">61</span><span class="hits"></span><span></span></div>
+<div class="code-line hit"><span class="ln">62</span><span class="hits">1</span><span>        if (!quietMap) {</span></div>
+<div class="code-line miss"><span class="ln">63</span><span class="hits">0</span><span>            std::cout &lt;&lt; &quot;Initial map\n&quot; &lt;&lt; simulator.render() &lt;&lt; &#39;\n&#39;;</span></div>
+<div class="code-line neutral"><span class="ln">64</span><span class="hits"></span><span>        }</span></div>
+<div class="code-line neutral"><span class="ln">65</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line neutral"><span class="ln">77</span><span class="hits"></span><span></span></div>
+<div class="code-line hit"><span class="ln">78</span><span class="hits">1</span><span>        if (!quietMap) {</span></div>
+<div class="code-line miss"><span class="ln">79</span><span class="hits">0</span><span>            std::cout &lt;&lt; &quot;Final map\n&quot; &lt;&lt; simulator.render() &lt;&lt; &#39;\n&#39;;</span></div>
+<div class="code-line neutral"><span class="ln">80</span><span class="hits"></span><span>        }</span></div>
+<div class="code-line neutral"><span class="ln">81</span><span class="hits"></span><span></span></div>
+<div class="code-line hit"><span class="ln">82</span><span class="hits">1</span><span>        return 0;</span></div>
+<div class="code-line miss"><span class="ln">83</span><span class="hits">0</span><span>    } catch (const std::exception&amp; error) {</span></div>
+<div class="code-line miss"><span class="ln">84</span><span class="hits">0</span><span>        std::cerr &lt;&lt; &quot;Error: &quot; &lt;&lt; error.what() &lt;&lt; &#39;\n&#39;;</span></div>
+<div class="code-line miss"><span class="ln">85</span><span class="hits">0</span><span>        return 1;</span></div>
+<div class="code-line miss"><span class="ln">86</span><span class="hits">0</span><span>    }</span></div>
+<div class="code-line hit"><span class="ln">87</span><span class="hits">1</span><span>}</span></div>
+</div></section>
+<section class="panel"><h3><code>src/GridSimulator.cpp</code> <span class="muted">83.8% · 미커버 26, 107-109, 115-117, 119-121, 123-125</span></h3>
+<div class="code" role="table" aria-label="uncovered source lines">
+<div class="code-line hit"><span class="ln">24</span><span class="hits">1</span><span>    std::ifstream input(path);</span></div>
+<div class="code-line hit"><span class="ln">25</span><span class="hits">1</span><span>    if (!input) {</span></div>
+<div class="code-line miss"><span class="ln">26</span><span class="hits">0</span><span>        throw std::runtime_error(&quot;failed to open scenario file: &quot; + path.string());</span></div>
+<div class="code-line neutral"><span class="ln">27</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line neutral"><span class="ln">28</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">105</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">106</span><span class="hits"></span><span></span></div>
+<div class="code-line miss"><span class="ln">107</span><span class="hits">0</span><span>int GridSimulator::dustCleaned() const {</span></div>
+<div class="code-line miss"><span class="ln">108</span><span class="hits">0</span><span>    return hardwareAdapter_-&gt;dustCleaned();</span></div>
+<div class="code-line miss"><span class="ln">109</span><span class="hits">0</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">110</span><span class="hits"></span><span></span></div>
+<div class="code-line hit"><span class="ln">111</span><span class="hits">1</span><span>int GridSimulator::remainingDust() const {</span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">113</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">114</span><span class="hits"></span><span></span></div>
+<div class="code-line miss"><span class="ln">115</span><span class="hits">0</span><span>Position GridSimulator::robotPosition() const {</span></div>
+<div class="code-line miss"><span class="ln">116</span><span class="hits">0</span><span>    return hardwareAdapter_-&gt;robotPosition();</span></div>
+<div class="code-line miss"><span class="ln">117</span><span class="hits">0</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">118</span><span class="hits"></span><span></span></div>
+<div class="code-line miss"><span class="ln">119</span><span class="hits">0</span><span>Direction GridSimulator::robotDirection() const {</span></div>
+<div class="code-line miss"><span class="ln">120</span><span class="hits">0</span><span>    return hardwareAdapter_-&gt;robotDirection();</span></div>
+<div class="code-line miss"><span class="ln">121</span><span class="hits">0</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">122</span><span class="hits"></span><span></span></div>
+<div class="code-line miss"><span class="ln">123</span><span class="hits">0</span><span>const std::vector&lt;std::string&gt;&amp; GridSimulator::logs() const {</span></div>
+<div class="code-line miss"><span class="ln">124</span><span class="hits">0</span><span>    return logs_;</span></div>
+<div class="code-line miss"><span class="ln">125</span><span class="hits">0</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">126</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">127</span><span class="hits"></span><span>GridSimulator::GridSimulator(std::unique_ptr&lt;SimulatedHardwareAdapter&gt; hardwareAdapter)</span></div>
+</div></section>
+<section class="panel"><h3><code>src/Rvc.cpp</code> <span class="muted">85.7% · 미커버 11, 43-45</span></h3>
+<div class="code" role="table" aria-label="uncovered source lines">
+<div class="code-line hit"><span class="ln">9</span><span class="hits">1</span><span>    : controller_(config), hardwareAdapter_(std::move(hardwareAdapter)) {</span></div>
+<div class="code-line hit"><span class="ln">10</span><span class="hits">1</span><span>    if (hardwareAdapter_ == nullptr) {</span></div>
+<div class="code-line miss"><span class="ln">11</span><span class="hits">0</span><span>        throw std::invalid_argument(&quot;hardwareAdapter must not be null&quot;);</span></div>
+<div class="code-line neutral"><span class="ln">12</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line hit"><span class="ln">13</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">41</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">42</span><span class="hits"></span><span></span></div>
+<div class="code-line miss"><span class="ln">43</span><span class="hits">0</span><span>const Command&amp; Rvc::lastCommand() const {</span></div>
+<div class="code-line miss"><span class="ln">44</span><span class="hits">0</span><span>    return lastCommand_;</span></div>
+<div class="code-line miss"><span class="ln">45</span><span class="hits">0</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">46</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">47</span><span class="hits"></span><span>}  // namespace rvc</span></div>
+</div></section>
+<section class="panel"><h3><code>src/Types.cpp</code> <span class="muted">88.7% · 미커버 16, 30, 48, 66, 78, 96, 110</span></h3>
+<div class="code" role="table" aria-label="uncovered source lines">
+<div class="code-line hit"><span class="ln">14</span><span class="hits">1</span><span>            return Direction::North;</span></div>
+<div class="code-line neutral"><span class="ln">15</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line miss"><span class="ln">16</span><span class="hits">0</span><span>    return Direction::North;</span></div>
+<div class="code-line hit"><span class="ln">17</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">18</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">28</span><span class="hits">1</span><span>            return Direction::North;</span></div>
+<div class="code-line neutral"><span class="ln">29</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line miss"><span class="ln">30</span><span class="hits">0</span><span>    return Direction::North;</span></div>
+<div class="code-line hit"><span class="ln">31</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">32</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">46</span><span class="hits">1</span><span>            return &quot;West&quot;;</span></div>
+<div class="code-line neutral"><span class="ln">47</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line miss"><span class="ln">48</span><span class="hits">0</span><span>    return &quot;Unknown&quot;;</span></div>
+<div class="code-line hit"><span class="ln">49</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">50</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">64</span><span class="hits">1</span><span>            return &quot;TurnRight&quot;;</span></div>
+<div class="code-line neutral"><span class="ln">65</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line miss"><span class="ln">66</span><span class="hits">0</span><span>    return &quot;Unknown&quot;;</span></div>
+<div class="code-line hit"><span class="ln">67</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">68</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">76</span><span class="hits">1</span><span>            return &quot;Boost&quot;;</span></div>
+<div class="code-line neutral"><span class="ln">77</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line miss"><span class="ln">78</span><span class="hits">0</span><span>    return &quot;Unknown&quot;;</span></div>
+<div class="code-line hit"><span class="ln">79</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">80</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">94</span><span class="hits">1</span><span>            return &quot;Escaping&quot;;</span></div>
+<div class="code-line neutral"><span class="ln">95</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line miss"><span class="ln">96</span><span class="hits">0</span><span>    return &quot;Unknown&quot;;</span></div>
+<div class="code-line hit"><span class="ln">97</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">98</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">108</span><span class="hits">1</span><span>            return &quot;Blocked&quot;;</span></div>
+<div class="code-line neutral"><span class="ln">109</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line miss"><span class="ln">110</span><span class="hits">0</span><span>    return &quot;Unknown&quot;;</span></div>
+<div class="code-line hit"><span class="ln">111</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">112</span><span class="hits"></span><span></span></div>
+</div></section>
+<section class="panel"><h3><code>src/SimulatedHardwareAdapter.cpp</code> <span class="muted">91.6% · 미커버 14, 18, 20, 22, 32, 36, 44, 132, 136, 153</span></h3>
+<div class="code" role="table" aria-label="uncovered source lines">
+<div class="code-line hit"><span class="ln">12</span><span class="hits">1</span><span>    switch (direction) {</span></div>
+<div class="code-line neutral"><span class="ln">13</span><span class="hits"></span><span>        case Direction::North:</span></div>
+<div class="code-line miss"><span class="ln">14</span><span class="hits">0</span><span>            return &#39;^&#39;;</span></div>
+<div class="code-line neutral"><span class="ln">15</span><span class="hits"></span><span>        case Direction::East:</span></div>
+<div class="code-line hit"><span class="ln">16</span><span class="hits">1</span><span>            return &#39;&gt;&#39;;</span></div>
+<div class="code-line neutral"><span class="ln">17</span><span class="hits"></span><span>        case Direction::South:</span></div>
+<div class="code-line miss"><span class="ln">18</span><span class="hits">0</span><span>            return &#39;v&#39;;</span></div>
+<div class="code-line neutral"><span class="ln">19</span><span class="hits"></span><span>        case Direction::West:</span></div>
+<div class="code-line miss"><span class="ln">20</span><span class="hits">0</span><span>            return &#39;&lt;&#39;;</span></div>
+<div class="code-line neutral"><span class="ln">21</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line miss"><span class="ln">22</span><span class="hits">0</span><span>    return &#39;?&#39;;</span></div>
+<div class="code-line hit"><span class="ln">23</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">24</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">30</span><span class="hits">1</span><span>            return Direction::East;</span></div>
+<div class="code-line neutral"><span class="ln">31</span><span class="hits"></span><span>        case &#39;v&#39;:</span></div>
+<div class="code-line miss"><span class="ln">32</span><span class="hits">0</span><span>            return Direction::South;</span></div>
+<div class="code-line neutral"><span class="ln">33</span><span class="hits"></span><span>        case &#39;&lt;&#39;:</span></div>
+<div class="code-line hit"><span class="ln">34</span><span class="hits">1</span><span>            return Direction::West;</span></div>
+<div class="code-line neutral"><span class="ln">35</span><span class="hits"></span><span>        default:</span></div>
+<div class="code-line miss"><span class="ln">36</span><span class="hits">0</span><span>            return Direction::North;</span></div>
+<div class="code-line neutral"><span class="ln">37</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line hit"><span class="ln">38</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">42</span><span class="hits">1</span><span>SimulatedHardwareAdapter::SimulatedHardwareAdapter(std::vector&lt;std::string&gt; grid) : grid_(std::move(grid)) {</span></div>
+<div class="code-line hit"><span class="ln">43</span><span class="hits">1</span><span>    if (grid_.empty()) {</span></div>
+<div class="code-line miss"><span class="ln">44</span><span class="hits">0</span><span>        throw std::invalid_argument(&quot;scenario map must not be empty&quot;);</span></div>
+<div class="code-line neutral"><span class="ln">45</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line neutral"><span class="ln">46</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">130</span><span class="hits">1</span><span>bool SimulatedHardwareAdapter::hasDust(Position position) const {</span></div>
+<div class="code-line hit"><span class="ln">131</span><span class="hits">1</span><span>    if (position.row &lt; 0 || position.row &gt;= static_cast&lt;int&gt;(grid_.size())) {</span></div>
+<div class="code-line miss"><span class="ln">132</span><span class="hits">0</span><span>        return false;</span></div>
+<div class="code-line neutral"><span class="ln">133</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line neutral"><span class="ln">134</span><span class="hits"></span><span></span></div>
+<div class="code-line hit"><span class="ln">135</span><span class="hits">1</span><span>    if (position.col &lt; 0 || position.col &gt;= static_cast&lt;int&gt;(grid_[position.row].size())) {</span></div>
+<div class="code-line miss"><span class="ln">136</span><span class="hits">0</span><span>        return false;</span></div>
+<div class="code-line neutral"><span class="ln">137</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line neutral"><span class="ln">138</span><span class="hits"></span><span></span></div>
+<div class="code-line neutral"><span class="ln">...</span><span class="hits"></span><span>...</span></div>
+<div class="code-line hit"><span class="ln">151</span><span class="hits">1</span><span>            return Position{origin.row, origin.col - 1};</span></div>
+<div class="code-line neutral"><span class="ln">152</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line miss"><span class="ln">153</span><span class="hits">0</span><span>    return origin;</span></div>
+<div class="code-line hit"><span class="ln">154</span><span class="hits">1</span><span>}</span></div>
+<div class="code-line neutral"><span class="ln">155</span><span class="hits"></span><span></span></div>
+</div></section>
+<section class="panel"><h3><code>src/RvcController.cpp</code> <span class="muted">98% · 미커버 64</span></h3>
+<div class="code" role="table" aria-label="uncovered source lines">
+<div class="code-line hit"><span class="ln">62</span><span class="hits">1</span><span>Command RvcController::decideNextCommand(const SensorSnapshot&amp; snapshot) {</span></div>
+<div class="code-line hit"><span class="ln">63</span><span class="hits">1</span><span>    if (!running_) {</span></div>
+<div class="code-line miss"><span class="ln">64</span><span class="hits">0</span><span>        return makeCommand(Motion::Stop, CleaningPower::Off, &quot;controller idle&quot;);</span></div>
+<div class="code-line neutral"><span class="ln">65</span><span class="hits"></span><span>    }</span></div>
+<div class="code-line neutral"><span class="ln">66</span><span class="hits"></span><span></span></div>
+</div></section>
+<h2>실행 내역</h2><div class="panel"><p><strong>수집 명령:</strong> Microsoft.CodeCoverage.Console collect + merge, output-format cobertura</p><p><strong>수집 대상:</strong> <code>rvc_tests.exe</code>, <code>rvc_simulator.exe --ticks 5 --quiet-map</code>, <code>rvc_simulator.exe --scenario scenarios/continuous_backward.rvc --quiet-map</code></p><p><strong>산출물:</strong> <code>docs/coverage.merged.cobertura.xml</code>, <code>docs/coverage-test-results.xml</code>, <code>docs/coverage_analysis.html</code></p></div>
+</main></body></html>
+

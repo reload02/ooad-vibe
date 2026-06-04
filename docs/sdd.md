@@ -70,19 +70,36 @@
 
 ```mermaid
 flowchart LR
-    User[User] -->|start/stop| Rvc[Rvc]
-    Rvc -->|control operations| Controller[RvcController]
-    Adapter[RvcHardwareAdapter] -->|front interrupt| Rvc
-    Adapter -->|PeriodicSensorData| Rvc
-    Rvc -->|tick(periodicSensors)| Controller
-    Controller --> Snapshot[SensorSnapshot]
-    Snapshot --> Controller
-    Controller --> Command[Command]
-    Rvc -->|applyCommand| Adapter
-    Adapter --> Motor[Motor Motion]
-    Adapter --> Cleaner[Cleaner Power]
-    GridSimulator[GridSimulator] -.configures and runs.-> SimAdapter[SimulatedHardwareAdapter]
-    SimAdapter -.implements.-> Adapter
+    User[User]
+    Motor[Motor]
+    Cleaner[Cleaner]
+
+    subgraph Boundary["RVC Control SW Boundary"]
+        Rvc[Rvc]
+        Controller[RvcController]
+        Snapshot[SensorSnapshot]
+        Command[Command]
+        Adapter[RvcHardwareAdapter]
+    end
+
+    subgraph TestEnvironment["Simulation / Test Environment"]
+        GridSimulator[GridSimulator]
+        SimAdapter[SimulatedHardwareAdapter]
+    end
+
+    User -->|start / stop| Rvc
+    Rvc -->|control operations| Controller
+    Rvc -->|tick periodic sensors| Controller
+    Controller -->|builds| Snapshot
+    Snapshot -->|decision input| Controller
+    Controller -->|returns| Command
+    Adapter -->|front interrupt| Rvc
+    Adapter -->|periodic sensor data| Rvc
+    Rvc -->|apply command| Adapter
+    Adapter -->|motion command| Motor
+    Adapter -->|power command| Cleaner
+    GridSimulator -. configures and runs .-> SimAdapter
+    SimAdapter -. implements .-> Adapter
 ```
 
 ### 4.2 External Actors and Environment
@@ -147,41 +164,78 @@ flowchart LR
 | --- | --- | --- |
 | Core type | `include/rvc/Types.hpp`, `src/Types.cpp` | 방향, 동작, 청소 세기, 상태, 위치, sensor data, command type을 정의한다. |
 | RVC System | [추가] `Rvc` | `RvcController`와 `RvcHardwareAdapter`를 소유하고 start/stop/tick 흐름을 조율한다. |
-| Controller | `include/rvc/RvcController.hpp`, `src/RvcController.cpp` | [변경] 자동 청소 상태와 sensor snapshot을 기반으로 다음 motion/cleaner command를 결정하며 hardware adapter를 직접 알지 않는다. |
+| Controller | `include/rvc/RvcController.hpp`, `src/RvcController.cpp` | [r3변경] 실행 상태와 interrupt 소비를 조율하고 navigation/power 정책 결과를 command로 조합하며 hardware adapter를 직접 알지 않는다. [r3삭제] ~~회피 상태 전이와 dust boost tick을 controller 내부에서 모두 직접 관리한다.~~ |
+| Navigation Policy | `include/rvc/NavigationPolicy.hpp`, `src/NavigationPolicy.cpp` | [r3추가] 전방/좌측 장애물과 우측 탐색 상태를 기반으로 다음 motion과 회피/탈출 상태 전이를 결정한다. |
+| Cleaning Power Policy | `include/rvc/CleaningPowerPolicy.hpp`, `src/CleaningPowerPolicy.cpp` | [r3추가] 먼지 감지 후 boost 유지 tick을 관리하고 motion 판단과 독립적으로 cleaner power 후보를 결정한다. |
 | Hardware Adapter | [추가] `RvcHardwareAdapter`, `SimulatedHardwareAdapter` | 전방 interrupt 확인, periodic sensor 읽기, `Command` 적용을 추상화하고 테스트 환경에서는 격자 상태로 이를 구현한다. |
 | Simulator | `include/rvc/GridSimulator.hpp`, `src/GridSimulator.cpp` | [변경] `SimulatedHardwareAdapter`를 통해 sensor/event와 command 적용 결과를 제공하고 로그와 실행 결과를 만든다. |
 | CLI | `src/main.cpp` | simulator 실행 옵션을 파싱하고 초기/최종 지도, tick 로그, summary를 출력한다. |
-| Tests | `tests/controller_tests.cpp`, `tests/system_tests.cpp` | controller 규칙과 simulator 통합 흐름을 검증한다. |
+| Tests | `tests/controller_tests.cpp`, `tests/policy_tests.cpp`, `tests/system_tests.cpp` | controller 조합, 분리된 정책 규칙, simulator 통합 흐름을 검증한다. |
 
 #### 7.1.2 OOD Class Diagram
 
-[변경] 이 다이어그램은 `GridSimulator`가 `RvcController`를 직접 소유하는 표현을 제거하고, `Rvc`가 controller와 hardware adapter를 소유하는 구조를 기준으로 한다.
+[r3변경] 이 다이어그램은 `GridSimulator`가 `RvcController`를 직접 소유하는 표현을 제거하고, `Rvc`가 controller와 hardware adapter를 소유하는 구조를 기준으로 한다. `RvcController`의 navigation/power 판단 책임은 `NavigationPolicy`와 `CleaningPowerPolicy`로 분리된 구조를 반영한다.
 [삭제] ~~`GridSimulator *-- RvcController`~~
 [추가] `Rvc *-- RvcController`, `Rvc *-- RvcHardwareAdapter`, `RvcHardwareAdapter <|-- SimulatedHardwareAdapter`
+[r3삭제] ~~`RvcController`가 `ControllerState`, `RightProbeState`, `boostTicksRemaining`을 직접 보유해 navigation과 dust boost 정책을 모두 처리한다.~~
+[r3추가] `NavigationPolicy`, `CleaningPowerPolicy`, `NavigationDecision`을 별도 설계 요소로 추가한다.
 
 ```mermaid
 classDiagram
     class Rvc {
         -RvcController controller
-        -RvcHardwareAdapter hardwareAdapter
+        -unique_ptr~RvcHardwareAdapter~ hardwareAdapter
+        -bool lastFrontObstacleInterrupt
+        -PeriodicSensorData lastPeriodicSensors
+        -Command lastCommand
+        +Rvc(unique_ptr~RvcHardwareAdapter~, ControllerConfig)
         +startCleaning()
         +stopCleaning()
         +tick() Command
+        +lastFrontObstacleInterrupt() bool
+        +lastPeriodicSensors() PeriodicSensorData
+        +lastCommand() Command
     }
 
     class RvcController {
-        -ControllerConfig config
-        -ControllerState state
+        -NavigationPolicy navigation
+        -CleaningPowerPolicy cleaningPower
         -bool running
         -bool frontInterruptPending
-        -RightProbeState rightProbe
-        -int boostTicksRemaining
         +startCleaning()
         +stopCleaning()
         +onFrontObstacleInterrupt()
         +tick(PeriodicSensorData) Command
         +readPeriodicSensors(PeriodicSensorData) SensorSnapshot
         +decideNextCommand(SensorSnapshot) Command
+        +state() ControllerState
+        +rightProbeState() RightProbeState
+        +isRunning() bool
+        +boostTicksRemaining() int
+    }
+
+    class NavigationPolicy {
+        -ControllerState state
+        -RightProbeState rightProbe
+        +startCleaning()
+        +stopCleaning()
+        +decide(SensorSnapshot) NavigationDecision
+        +state() ControllerState
+        +rightProbeState() RightProbeState
+    }
+
+    class CleaningPowerPolicy {
+        -int dustBoostTicks
+        -int boostTicksRemaining
+        +CleaningPowerPolicy(dustBoostTicks)
+        +reset()
+        +update(dustDetected) CleaningPower
+        +boostTicksRemaining() int
+    }
+
+    class NavigationDecision {
+        +Motion motion
+        +string reason
     }
 
     class ControllerConfig {
@@ -217,22 +271,34 @@ classDiagram
         -vector~string~ grid
         -Position robot
         -Direction direction
+        -int dustCleaned
+        +SimulatedHardwareAdapter(grid)
         +hasFrontObstacleInterrupt() bool
         +readPeriodicSensors() PeriodicSensorData
         +applyCommand(Command)
         +render() string
+        +dustCleaned() int
+        +remainingDust() int
+        +robotPosition() Position
+        +robotDirection() Direction
     }
 
     class GridSimulator {
-        -SimulatedHardwareAdapter hardwareAdapter
+        -SimulatedHardwareAdapter* hardwareAdapter
         -Rvc rvc
+        -bool started
+        -vector~string~ logs
         +fromLines(lines) GridSimulator
         +loadScenario(path) Scenario
         +defaultMap() vector~string~
         +run(maxTicks, includeFrames) SimulationResult
         +step(tick, includeFrame) bool
         +render() string
+        +dustCleaned() int
         +remainingDust() int
+        +robotPosition() Position
+        +robotDirection() Direction
+        +logs() vector~string~
     }
 
     class Scenario {
@@ -261,14 +327,21 @@ classDiagram
 
     Rvc *-- RvcController
     Rvc *-- RvcHardwareAdapter
+    Rvc --> PeriodicSensorData
+    Rvc --> Command
     RvcHardwareAdapter <|-- SimulatedHardwareAdapter
     SimulatedHardwareAdapter --> PeriodicSensorData
     SimulatedHardwareAdapter --> Command
     RvcController --> ControllerConfig
+    RvcController *-- NavigationPolicy
+    RvcController *-- CleaningPowerPolicy
     RvcController --> PeriodicSensorData
     RvcController --> SensorSnapshot
     RvcController --> Command
-    GridSimulator *-- SimulatedHardwareAdapter
+    NavigationPolicy --> NavigationDecision
+    NavigationPolicy --> SensorSnapshot
+    CleaningPowerPolicy --> CleaningPower
+    GridSimulator --> SimulatedHardwareAdapter
     GridSimulator --> Rvc
     GridSimulator --> Scenario
     GridSimulator --> SimulationResult
@@ -279,7 +352,10 @@ classDiagram
 | Class | Responsibility |
 | --- | --- |
 | `Rvc` | [추가] RVC 상위 시스템 객체로서 `RvcController`와 `RvcHardwareAdapter`를 소유하고 sensor 입력, controller 판단, command 적용 흐름을 조율한다. |
-| `RvcController` | [변경] 하드웨어나 시뮬레이터를 소유하지 않고, sensor snapshot과 핵심 제어 규칙에 따라 command를 결정한다. |
+| `RvcController` | [r3변경] 하드웨어나 시뮬레이터를 소유하지 않고, 실행 상태와 interrupt 소비를 조율하며 `NavigationPolicy`와 `CleaningPowerPolicy` 결과를 조합해 command를 반환한다. [r3삭제] ~~navigation 상태 전이와 dust boost tick을 직접 관리한다.~~ |
+| `NavigationPolicy` | [r3추가] 전방/좌측 장애물과 우측 탐색 상태를 기반으로 다음 motion과 회피/탈출 상태 전이를 결정한다. |
+| `CleaningPowerPolicy` | [r3추가] 먼지 감지 후 boost 유지 tick을 관리하고 motion 판단과 독립적으로 cleaner power 후보를 결정한다. |
+| `NavigationDecision` | [r3추가] navigation 판단 결과인 motion과 판단 이유를 담는다. |
 | `ControllerConfig` | boost duration 같은 제어 정책 값을 제공한다. |
 | `PeriodicSensorData` | [R2-변경] 좌측, 먼지 periodic sensor 값을 전달한다. [R2-삭제] ~~우측 periodic sensor 값을 전달한다.~~ |
 | `SensorSnapshot` | [R2-변경] pending front interrupt와 좌측/먼지 periodic sensor 값, 우측 탐색 결과를 결합한 판단 입력이다. |
@@ -307,9 +383,9 @@ classDiagram
 | `RvcController::startCleaning()` | 없음 | 없음 | 자동 청소 실행 상태로 전환하고 전방 interrupt pending 값을 초기화한다. | FR-01, FR-03 |
 | `RvcController::stopCleaning()` | 없음 | 없음 | idle 상태로 전환하고 motor stop/cleaner off 상태가 되도록 내부 실행 상태와 boost timer를 초기화한다. | FR-02 |
 | `RvcController::onFrontObstacleInterrupt()` | 없음 | 없음 | 실행 중일 때 전방 장애물 interrupt를 pending 상태로 기록한다. | FR-04, FR-05 |
-| `RvcController::tick(const PeriodicSensorData&)` | periodic sensor 값 | `Command` | [R2-변경] 제어 tick마다 좌측/먼지 sensor 값과 우측 탐색 상태를 반영하고 다음 command를 반환한다. | FR-06 to FR-15 |
+| `RvcController::tick(const PeriodicSensorData&)` | periodic sensor 값 | `Command` | [R2-변경] 제어 tick마다 좌측/먼지 sensor 값과 우측 탐색 상태를 반영한다. [r3변경] navigation/power 정책 결과를 조합해 다음 command를 반환한다. | FR-06 to FR-15 |
 | `RvcController::readPeriodicSensors(const PeriodicSensorData&)` | periodic sensor 값 | `SensorSnapshot` | [R2-변경] pending front interrupt, 좌측/먼지 periodic 값, 우측 탐색 결과를 결합한다. | FR-04, FR-06 |
-| `RvcController::decideNextCommand(const SensorSnapshot&)` | sensor snapshot | `Command` | [R2-변경] 상태, 좌측 장애물, 우측 탐색 결과, 먼지 정보를 기반으로 motion과 cleaner power를 결정한다. | FR-07 to FR-15 |
+| `RvcController::decideNextCommand(const SensorSnapshot&)` | sensor snapshot | `Command` | [r3변경] `NavigationPolicy`가 결정한 motion과 `CleaningPowerPolicy`가 결정한 cleaner power 후보를 조합한다. [r3삭제] ~~상태, 좌측 장애물, 우측 탐색 결과, 먼지 정보를 기반으로 motion과 cleaner power를 모두 직접 결정한다.~~ | FR-07 to FR-15 |
 
 #### 7.2.3 Hardware Adapter Interface
 
@@ -614,7 +690,7 @@ stateDiagram-v2
 5. [추가] `Rvc::tick()`은 반환된 `Command`를 `RvcHardwareAdapter::applyCommand(command)`로 적용한다.
 6. `RvcController` 내부에서 `running_`이 false이면 `Motion::Stop`, `CleaningPower::Off` command를 반환한다.
 7. [R2-변경] `readPeriodicSensors()`가 `frontInterruptPending_`, 좌측/먼지 `PeriodicSensorData`, 우측 탐색 상태를 결합해 `SensorSnapshot`을 만든다.
-8. `decideNextCommand()`가 snapshot과 현재 state를 기반으로 command를 결정한다.
+8. [r3변경] `decideNextCommand()`가 `NavigationPolicy`의 motion 판단과 `CleaningPowerPolicy`의 cleaner power 판단을 조합해 command를 결정한다. [r3삭제] ~~controller 내부 단일 판단 로직이 회피/탈출과 boost를 모두 직접 결정한다.~~
 9. `RvcController::tick()`은 command 결정 후 `frontInterruptPending_`를 false로 되돌려 interrupt를 소비한다.
 
 #### 7.6.2 Obstacle Avoidance
@@ -634,7 +710,7 @@ stateDiagram-v2
 
 #### 7.6.4 Dust Boost Rule
 
-`updateCleaningPower(bool dustDetected)`는 motion 판단과 독립적으로 cleaner power 후보를 결정한다. 먼지가 감지되면 `boostTicksRemaining_`을 `config_.dustBoostTicks`로 재설정한다. 먼지가 감지되지 않고 남은 boost tick이 있으면 1 감소시킨다. 남은 boost tick이 0보다 크면 `Boost`, 아니면 `Normal`을 반환한다. 최종 `Command` 생성 시에는 `Forward` 동작에서만 해당 power를 출력하고, 회피 회전, 후진, 정지 동작에서는 cleaner power를 `Off`로 내보낸다.
+[r3변경] `CleaningPowerPolicy::update(bool dustDetected)`는 motion 판단과 독립적으로 cleaner power 후보를 결정한다. [r3삭제] ~~`RvcController::updateCleaningPower(bool dustDetected)`가 controller 내부 boost 상태를 직접 갱신한다.~~ 먼지가 감지되면 내부 boost 잔여 tick을 configured duration으로 재설정한다. 먼지가 감지되지 않고 남은 boost tick이 있으면 1 감소시킨다. 남은 boost tick이 0보다 크면 `Boost`, 아니면 `Normal`을 반환한다. 최종 `Command` 생성 시에는 `Forward` 동작에서만 해당 power를 출력하고, 회피 회전, 후진, 정지 동작에서는 cleaner power를 `Off`로 내보낸다.
 
 ### 7.7 Error Handling View
 
@@ -656,7 +732,8 @@ stateDiagram-v2
 
 | 테스트 수준 | 대상 | 검증 내용 |
 | --- | --- | --- |
-| Controller unit test | `RvcController` | [R2-변경] 전진, 중지, interrupt 회피, 좌측 회피, 우측 탐색 성공/실패, 원래 방향 복구 후 후진, 탈출 중 우측 탐색 반복, dust boost duration, 회피 중 cleaner off |
+| Controller unit test | `RvcController` | [R2-변경] 전진, 중지, interrupt 소비, 회피 중 cleaner off. [r3변경] navigation/power 정책 조합을 검증한다. |
+| Policy unit test | `NavigationPolicy`, `CleaningPowerPolicy` | [r3추가] 좌측 회피, 우측 탐색 성공/실패, 원래 방향 복구 후 후진, dust boost duration과 reset을 독립적으로 검증한다. |
 | RVC integration test | [추가] `Rvc`, `RvcHardwareAdapter` | adapter 입력을 읽어 controller에 전달하고 command를 adapter에 적용하는 tick orchestration |
 | Simulator system test | `GridSimulator`, `SimulatedHardwareAdapter` | [R2-변경] 테스트용 adapter가 실제 격자에서 dust 청소, 후진 탈출, 우측 탐색 성공/실패, 원래 방향 복구, boost 중 cleaner off, front interrupt 후 회전을 재현하는지 검증 |
 | CLI CTest | `rvc_simulator` | 기본 실행과 scenario 기반 실행 가능 여부 |
@@ -678,8 +755,8 @@ stateDiagram-v2
 | FR-11 | [R2-변경] `Escaping` 상태의 `Motion::Backward`와 후진 후 우측 탐색 반복 | `EscapingBacksUpThenReprobesRight`, `SimulatorRepeatsRightProbeAfterBackward` |
 | FR-12 | [R2-변경] 좌측 open 또는 우측 탐색 open 조건 판단 | `EscapingTurnsLeftWhenLeftOpens`, `RightProbeOpenResumesForward` |
 | FR-13 | [R2-변경] 좌측 탈출 회전 또는 우측 탐색 성공 후 전진 | `EscapingTurnsLeftWhenLeftOpens`, `RightProbeOpenResumesForward` |
-| FR-14 | `updateCleaningPower`, `ControllerConfig::dustBoostTicks` | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained`, `SimulatorCleansDustAndLogsCommands`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
-| FR-15 | `boostTicksRemaining_` 감소와 `CleaningPower::Normal` 복귀 | `DustBoostLastsConfiguredTicks`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained` |
+| FR-14 | [r3변경] `CleaningPowerPolicy::update`, `ControllerConfig::dustBoostTicks` | `DustBoostLastsConfiguredTicks`, [r3추가] `DustRefreshesAndAgesBoostBudget`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained`, `SimulatorCleansDustAndLogsCommands`, `SimulatorKeepsCleanerOffDuringBoostedEscape` |
+| FR-15 | [r3변경] `CleaningPowerPolicy`의 boost 잔여 tick 감소와 `CleaningPower::Normal` 복귀 | `DustBoostLastsConfiguredTicks`, [r3추가] `DustRefreshesAndAgesBoostBudget`, `AvoidanceOutputStaysOffWhileBoostStateIsMaintained` |
 | FR-16 | `GridSimulator::render`, scenario map symbol | `SimulatorCliDefaultRuns`, `SimulatorCliContinuousBackwardScenarioRuns` |
 | FR-17 | `GridSimulator::makeLogLine`, `SimulationResult::logs` | `SimulatorCleansDustAndLogsCommands`, CLI CTest |
 | FR-18 | [변경] `Rvc`가 `RvcHardwareAdapter` 계약을 통해 `RvcController`와 `Command`를 연결하고, `GridSimulator`는 `SimulatedHardwareAdapter`로 같은 흐름을 검증 | `SimulatorCleansDustAndLogsCommands`, `SimulatorUsesBackwardEscape` |
@@ -694,8 +771,9 @@ stateDiagram-v2
 | [R2-변경] 좌측/먼지 값은 `tick(PeriodicSensorData)` 호출마다 controller에 전달한다. | 우측 센서 제거 후에도 남은 periodic sensor sampling 요구사항을 controller API에 직접 반영하기 위해서이다. |
 | [R2-삭제] ~~우측 값은 `tick(PeriodicSensorData)` 호출마다 controller에 전달한다.~~ | ~~우측 센서가 제거되어 periodic 입력으로 제공되지 않는다.~~ |
 | [R2-추가] 우측 장애물은 `TurnRight` 후 front interrupt로 확인한다. | 하드웨어에서 우측 센서가 제거되었으므로 기존 우측 방향을 전방 센서의 관측 방향으로 바꿔 재사용하기 위해서이다. |
+| [r3추가] `NavigationPolicy`와 `CleaningPowerPolicy`를 `RvcController`에서 분리한다. | 방향 결정과 dust boost 예산 관리를 독립 책임으로 분리해 `RvcController`의 SRP 위반을 줄이고 정책 단위 테스트를 가능하게 하기 위해서이다. |
 | `readPeriodicSensors()`는 pending front interrupt와 periodic 값, 우측 탐색 상태를 결합하여 `SensorSnapshot`을 만든다. | 서로 다른 입력 timing과 탐색 결과를 단일 판단 입력으로 정리하기 위해서이다. |
-| `decideNextCommand()`는 단일 판단 지점으로 둔다. | 회피, 탈출, boost 판단을 단위 테스트하기 쉽게 만들기 위해서이다. |
+| [r3변경] `decideNextCommand()`는 navigation 판단과 power 판단을 조합하는 지점으로 둔다. [r3삭제] ~~회피, 탈출, boost 판단을 모두 controller 내부 단일 판단 지점에서 직접 처리한다.~~ | 회피/탈출 상태 전이는 `NavigationPolicy`, boost 판단은 `CleaningPowerPolicy`에서 독립적으로 테스트하고 controller는 조합 책임만 검증하기 위해서이다. |
 | [R2-변경] `Escaping` 상태에서 후진 후 좌측이 계속 막혀 있으면 반드시 우측 탐색을 반복한다. | 우측 센서가 없어도 후진 중 기존 우측 출구를 놓치지 않기 위해서이다. |
 | `Rvc`는 `RvcController`와 `RvcHardwareAdapter`를 소유한다. | [추가] 수업 의도에 맞게 RVC 자체를 메인 시스템으로 드러내고 controller와 hardware 경계를 명확히 하기 위해서이다. |
 | `SimulatedHardwareAdapter`는 controller command를 실제 하드웨어 대신 격자 상태에 적용한다. | [변경] 실제 하드웨어 없이도 같은 adapter 계약으로 요구사항을 반복 검증하기 위해서이다. |
@@ -705,7 +783,7 @@ stateDiagram-v2
 
 | Principle | Application |
 | --- | --- |
-| SRP | [변경] `RvcController`는 제어 결정만 담당하고, `Rvc`는 실행 흐름 조율만 담당하며, `GridSimulator`는 검증 환경 제공만 담당한다. |
+| SRP | [r3변경] `RvcController`는 tick 실행과 command 조합을 담당하고, 방향/회피 상태 전이는 `NavigationPolicy`, 먼지 boost 예산은 `CleaningPowerPolicy`, 하드웨어 흐름은 `Rvc`, 검증 환경은 `GridSimulator`가 담당한다. |
 | OCP | [R2-변경] sensor 입력은 `PeriodicSensorData`, interrupt API, 우측 탐색 상태로 추상화되어 sensor 변경 시 controller 확장이 가능하다. |
 | LSP | [변경] `SimulatedHardwareAdapter`와 실제 하드웨어 adapter는 같은 `RvcHardwareAdapter` 계약과 `Command` 의미를 따르므로 대체 가능하다. |
 | ISP | controller의 public interface는 시작, 중지, interrupt, tick, 판단에 필요한 작은 operation으로 분리된다. |
