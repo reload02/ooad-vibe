@@ -70,19 +70,36 @@
 
 ```mermaid
 flowchart LR
-    User[User] -->|start/stop| Rvc[Rvc]
-    Rvc -->|control operations| Controller[RvcController]
-    Adapter[RvcHardwareAdapter] -->|front interrupt| Rvc
-    Adapter -->|PeriodicSensorData| Rvc
-    Rvc -->|tick(periodicSensors)| Controller
-    Controller --> Snapshot[SensorSnapshot]
-    Snapshot --> Controller
-    Controller --> Command[Command]
-    Rvc -->|applyCommand| Adapter
-    Adapter --> Motor[Motor Motion]
-    Adapter --> Cleaner[Cleaner Power]
-    GridSimulator[GridSimulator] -.configures and runs.-> SimAdapter[SimulatedHardwareAdapter]
-    SimAdapter -.implements.-> Adapter
+    User[User]
+    Motor[Motor]
+    Cleaner[Cleaner]
+
+    subgraph Boundary["RVC Control SW Boundary"]
+        Rvc[Rvc]
+        Controller[RvcController]
+        Snapshot[SensorSnapshot]
+        Command[Command]
+        Adapter[RvcHardwareAdapter]
+    end
+
+    subgraph TestEnvironment["Simulation / Test Environment"]
+        GridSimulator[GridSimulator]
+        SimAdapter[SimulatedHardwareAdapter]
+    end
+
+    User -->|start / stop| Rvc
+    Rvc -->|control operations| Controller
+    Rvc -->|tick periodic sensors| Controller
+    Controller -->|builds| Snapshot
+    Snapshot -->|decision input| Controller
+    Controller -->|returns| Command
+    Adapter -->|front interrupt| Rvc
+    Adapter -->|periodic sensor data| Rvc
+    Rvc -->|apply command| Adapter
+    Adapter -->|motion command| Motor
+    Adapter -->|power command| Cleaner
+    GridSimulator -. configures and runs .-> SimAdapter
+    SimAdapter -. implements .-> Adapter
 ```
 
 ### 4.2 External Actors and Environment
