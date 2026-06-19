@@ -159,19 +159,19 @@ NavigationDecision NavigationPolicy::decideInternal(const SensorSnapshot& snapsh
     }
 
     if (state_ == ControllerState::Escaping) {
-        if (snapshot.backwardObstacle) {
-            return {
-                .motion = Motion::Stop,
-                .reason = "escaping: backward blocked, stop motion",
-            };
-        }
-
         if (!snapshot.leftObstacle) {
             state_ = ControllerState::Avoiding;
             rightProbe_ = RightProbeState::None;
             return {
                 .motion = Motion::TurnLeft,
                 .reason = "escaping: left opened, turn toward exit",
+            };
+        }
+
+        if (snapshot.backwardObstacle) {
+            return {
+                .motion = Motion::Stop,
+                .reason = "escaping: backward blocked, stop motion",
             };
         }
 
