@@ -64,6 +64,13 @@ NavigationDecision NavigationPolicy::decideInternal(const SensorSnapshot& snapsh
 
         if (wasForward_) {
             if (snapshot.backwardObstacle) {
+                if (snapshot.leftObstacle) {
+                    state_ = ControllerState::DustLeavingForward;
+                    return {
+                        .motion = Motion::Stop,
+                        .reason = "dust leaving check: backward & left blocked, escape forward",
+                    };
+                }
                 state_ = ControllerState::Escaping;
                 rightProbe_ = RightProbeState::Blocked;
                 return {
