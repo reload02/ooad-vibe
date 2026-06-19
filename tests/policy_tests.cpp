@@ -103,14 +103,29 @@ TEST(NavigationPolicyTest, DustSpinningAndLeavingSequence) {
     EXPECT_EQ(dec1.motion, Motion::TurnRight);
     EXPECT_EQ(policy.state(), ControllerState::DustSpinning);
 
-    // 2. DustSpinning (2번째 틱) -> 완료 후 DustLeaving 전이
+    // 2. DustSpinning (2번째 틱) -> 2틱 완료 시점 (상태는 다음 틱 시작 시 DustLeaving으로 전이 예정)
     NavigationDecision dec2 = policy.decide(SensorSnapshot{});
     EXPECT_EQ(dec2.motion, Motion::TurnRight);
-    EXPECT_EQ(policy.state(), ControllerState::DustLeaving);
+    EXPECT_EQ(policy.state(), ControllerState::DustSpinning);
 
-    // 3. DustLeaving (3번째 틱) -> 이탈 후 이전 상태인 Cleaning 복구
+    // 3. DustLeaving (3번째 틱) -> 대기 판단 상태로 이동 (DustLeavingBackward)
     NavigationDecision dec3 = policy.decide(SensorSnapshot{});
-    EXPECT_EQ(dec3.motion, Motion::Forward);
+    EXPECT_EQ(dec3.motion, Motion::Stop);
+    EXPECT_EQ(policy.state(), ControllerState::DustLeavingBackward);
+
+    // 4. DustLeavingBackward (4번째 틱) -> Backward 수행하여 Escaping 상태로 이동
+    NavigationDecision dec4 = policy.decide(SensorSnapshot{});
+    EXPECT_EQ(dec4.motion, Motion::Backward);
+    EXPECT_EQ(policy.state(), ControllerState::Escaping);
+
+    // 5. Escaping (5번째 틱) -> leftObstacle = false 이므로 TurnLeft 및 Avoiding 상태로 이동
+    NavigationDecision dec5 = policy.decide(SensorSnapshot{});
+    EXPECT_EQ(dec5.motion, Motion::TurnLeft);
+    EXPECT_EQ(policy.state(), ControllerState::Avoiding);
+
+    // 6. Avoiding (6번째 틱) -> frontObstacle = false 이므로 Forward 및 Cleaning 상태 복구
+    NavigationDecision dec6 = policy.decide(SensorSnapshot{});
+    EXPECT_EQ(dec6.motion, Motion::Forward);
     EXPECT_EQ(policy.state(), ControllerState::Cleaning);
 }
 

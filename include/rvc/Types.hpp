@@ -35,6 +35,8 @@ enum class ControllerState {
     Escaping,
     DustSpinning,
     DustLeaving,
+    DustLeavingBackward,
+    DustLeavingForward,
 };
 
 enum class RightProbeState {

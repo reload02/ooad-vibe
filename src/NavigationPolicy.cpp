@@ -8,6 +8,7 @@ void NavigationPolicy::startCleaning() {
     wasForward_ = true;
     savedState_ = ControllerState::Idle;
     spinTicks_ = 0;
+    isLeavingDustCell_ = false;
 }
 
 void NavigationPolicy::stopCleaning() {
@@ -16,9 +17,10 @@ void NavigationPolicy::stopCleaning() {
     wasForward_ = true;
     savedState_ = ControllerState::Idle;
     spinTicks_ = 0;
+    isLeavingDustCell_ = false;
 }
 
-NavigationDecision NavigationPolicy::decide(const SensorSnapshot& snapshot) {
+NavigationDecision NavigationPolicy::decideInternal(const SensorSnapshot& snapshot) {
     if (state_ == ControllerState::Idle) {
         return {
             .motion = Motion::Stop,
@@ -29,8 +31,6 @@ NavigationDecision NavigationPolicy::decide(const SensorSnapshot& snapshot) {
     // 0. 예약된 상태 전이 처리 (Tick 시작 시점)
     if (state_ == ControllerState::DustSpinning && spinTicks_ <= 0) {
         state_ = ControllerState::DustLeaving;
-    } else if (state_ == ControllerState::DustLeaving) {
-        state_ = savedState_;
     }
 
     // 1. 먼지 감지 및 이탈 상태 제어 (FSM 우선순위 1)
@@ -44,47 +44,73 @@ NavigationDecision NavigationPolicy::decide(const SensorSnapshot& snapshot) {
     }
 
     if (state_ == ControllerState::DustLeaving) {
-        if (wasForward_) {
-            state_ = ControllerState::Escaping;
-            rightProbe_ = RightProbeState::Blocked;
-            if (snapshot.backwardObstacle) {
+        if (snapshot.frontObstacle) {
+            if (!snapshot.leftObstacle) {
+                state_ = ControllerState::Avoiding;
+                rightProbe_ = RightProbeState::None;
                 return {
-                    .motion = Motion::Stop,
-                    .reason = "dust leaving: backward blocked, stop motion",
+                    .motion = Motion::TurnLeft,
+                    .reason = "dust leaving check: front blocked, left open, turn left to avoid",
+                };
+            } else {
+                state_ = ControllerState::RightProbing;
+                rightProbe_ = RightProbeState::Checking;
+                return {
+                    .motion = Motion::TurnRight,
+                    .reason = "dust leaving check: front blocked, left blocked, probe right to avoid",
                 };
             }
+        }
+
+        if (wasForward_) {
+            if (snapshot.backwardObstacle) {
+                state_ = ControllerState::Escaping;
+                rightProbe_ = RightProbeState::Blocked;
+                return {
+                    .motion = Motion::Stop,
+                    .reason = "dust leaving check: backward blocked, stop and escape",
+                };
+            }
+            state_ = ControllerState::DustLeavingBackward;
             return {
-                .motion = Motion::Backward,
-                .reason = "dust leaving: escaping dust cell",
+                .motion = Motion::Stop,
+                .reason = "dust leaving check: backward clear, check sensors for 1 tick",
             };
         } else {
-            if (snapshot.frontObstacle) {
-                if (!snapshot.leftObstacle) {
-                    state_ = ControllerState::Avoiding;
-                    rightProbe_ = RightProbeState::None;
-                    return {
-                        .motion = Motion::TurnLeft,
-                        .reason = "dust leaving: front blocked, left open, turn left",
-                    };
-                } else {
-                    state_ = ControllerState::RightProbing;
-                    rightProbe_ = RightProbeState::Checking;
-                    return {
-                        .motion = Motion::TurnRight,
-                        .reason = "dust leaving: front blocked, left blocked, probe right",
-                    };
-                }
-            }
-            state_ = ControllerState::Cleaning;
-            rightProbe_ = RightProbeState::None;
+            state_ = ControllerState::DustLeavingForward;
             return {
-                .motion = Motion::Forward,
-                .reason = "dust leaving: escaping dust cell",
+                .motion = Motion::Stop,
+                .reason = "dust leaving check: front clear, check sensors for 1 tick",
             };
         }
     }
 
-    if (snapshot.dustDetected) {
+    if (state_ == ControllerState::DustLeavingBackward) {
+        state_ = ControllerState::Escaping;
+        rightProbe_ = RightProbeState::Blocked;
+        if (snapshot.backwardObstacle) {
+            return {
+                .motion = Motion::Stop,
+                .reason = "dust leaving backward: backward blocked, stop motion",
+            };
+        }
+        return {
+            .motion = Motion::Backward,
+            .reason = "dust leaving backward: escaping dust cell",
+        };
+    }
+
+    if (state_ == ControllerState::DustLeavingForward) {
+        state_ = ControllerState::Cleaning;
+        rightProbe_ = RightProbeState::None;
+        return {
+            .motion = Motion::Forward,
+            .reason = "dust leaving forward: escaping dust cell",
+        };
+    }
+
+    if (snapshot.dustDetected && !isLeavingDustCell_) {
+        isLeavingDustCell_ = true;
         savedState_ = state_;
         state_ = ControllerState::DustSpinning;
         spinTicks_ = 2;
@@ -133,6 +159,13 @@ NavigationDecision NavigationPolicy::decide(const SensorSnapshot& snapshot) {
     }
 
     if (state_ == ControllerState::Escaping) {
+        if (snapshot.backwardObstacle) {
+            return {
+                .motion = Motion::Stop,
+                .reason = "escaping: backward blocked, stop motion",
+            };
+        }
+
         if (!snapshot.leftObstacle) {
             state_ = ControllerState::Avoiding;
             rightProbe_ = RightProbeState::None;
@@ -183,6 +216,14 @@ ControllerState NavigationPolicy::state() const {
 
 RightProbeState NavigationPolicy::rightProbeState() const {
     return rightProbe_;
+}
+
+NavigationDecision NavigationPolicy::decide(const SensorSnapshot& snapshot) {
+    NavigationDecision decision = decideInternal(snapshot);
+    if (decision.motion == Motion::Forward || decision.motion == Motion::Backward) {
+        isLeavingDustCell_ = false;
+    }
+    return decision;
 }
 
 }  // namespace rvc

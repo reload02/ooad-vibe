@@ -96,6 +96,10 @@ std::string toString(ControllerState state) {
             return "DustSpinning";
         case ControllerState::DustLeaving:
             return "DustLeaving";
+        case ControllerState::DustLeavingBackward:
+            return "DustLeavingBackward";
+        case ControllerState::DustLeavingForward:
+            return "DustLeavingForward";
     }
     return "Unknown";
 }

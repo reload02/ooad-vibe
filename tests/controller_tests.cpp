@@ -258,22 +258,40 @@ TEST(RvcControllerTest, DustSpinBoostSequenceAndEscape) {
     EXPECT_EQ(tick2.cleaningPower, CleaningPower::Boost);
     EXPECT_EQ(controller.state(), ControllerState::DustSpinning);
 
-    // 3. 이탈 틱 (Backward / Normal / 먼지 감지 강제 무시)
+    // 3. 이탈 틱 1 - Stop 대기 (wasForward_ = true 이므로, 뒤에 장애물 없는 경우 DustLeavingBackward로 가기 전 Stop)
     const Command tick3 = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
         .dustDetected = true, // 먼지가 계속 감지되지만 무시해야 함
     });
-    EXPECT_EQ(tick3.motion, Motion::Backward);
+    EXPECT_EQ(tick3.motion, Motion::Stop);
     EXPECT_EQ(tick3.cleaningPower, CleaningPower::Normal);
-    EXPECT_EQ(controller.state(), ControllerState::DustLeaving);
+    EXPECT_EQ(controller.state(), ControllerState::DustLeavingBackward);
 
-    // 4. 원래 상태(Cleaning) 복귀 틱
+    // 4. 이탈 틱 2 - Backward 수행 (DustLeavingBackward 상태에서 Backward 후 Escaping 상태로 전환)
     const Command tick4 = controller.tick(PeriodicSensorData{
+        .leftObstacle = false,
+        .dustDetected = true,
+    });
+    EXPECT_EQ(tick4.motion, Motion::Backward);
+    EXPECT_EQ(tick4.cleaningPower, CleaningPower::Normal);
+    EXPECT_EQ(controller.state(), ControllerState::Escaping);
+
+    // 5. Escaping 상태에서 leftObstacle = false 이므로 TurnLeft 및 Avoiding 상태로 전환
+    const Command tick5 = controller.tick(PeriodicSensorData{
         .leftObstacle = false,
         .dustDetected = false,
     });
-    EXPECT_EQ(tick4.motion, Motion::Forward);
-    EXPECT_EQ(tick4.cleaningPower, CleaningPower::Normal);
+    EXPECT_EQ(tick5.motion, Motion::TurnLeft);
+    EXPECT_EQ(tick5.cleaningPower, CleaningPower::Normal);
+    EXPECT_EQ(controller.state(), ControllerState::Avoiding);
+
+    // 6. Avoiding에서 장애물 해제 후 Cleaning 복귀
+    const Command tick6 = controller.tick(PeriodicSensorData{
+        .leftObstacle = false,
+        .dustDetected = false,
+    });
+    EXPECT_EQ(tick6.motion, Motion::Forward);
+    EXPECT_EQ(tick6.cleaningPower, CleaningPower::Normal);
     EXPECT_EQ(controller.state(), ControllerState::Cleaning);
 }
 
