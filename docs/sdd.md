@@ -399,7 +399,7 @@ classDiagram
 | Operation | Input | Output | 책임 | 관련 요구사항 |
 | --- | --- | --- | --- | --- |
 | `RvcController::startCleaning()` | 없음 | 없음 | 자동 청소 실행 상태로 전환하고 전방 interrupt pending 값을 초기화한다. | FR-01, FR-03 |
-| `RvcController::stopCleaning()` | 없음 | 없음 | idle 상태로 전환하고 motor stop/cleaner off 상태가 되도록 내부 실행 상태와 boost timer를 초기화한다. | FR-02 |
+| `RvcController::stopCleaning()` | 없음 | 없음 | idle 상태로 전환하고 motor stop/cleaner off 상태가 되도록 내부 실행 상태와 dust/cleaner 정책 상태를 초기화한다. | FR-02 |
 | `RvcController::onFrontObstacleInterrupt()` | 없음 | 없음 | 실행 중일 때 전방 장애물 interrupt를 pending 상태로 기록한다. | FR-04, FR-05 |
 | `RvcController::onRearObstacleInterrupt()` | 없음 | 없음 | [R3-추가] 실행 중일 때 후방 장애물 interrupt를 pending 상태로 기록한다. | FR-19, FR-20 |
 | `RvcController::tick(const PeriodicSensorData&)` | periodic sensor 값 | `Command` | [R2-변경] 제어 tick마다 좌측/먼지 sensor 값과 우측 탐색 상태를 반영한다. [R3-변경] rear interrupt와 travel direction을 함께 반영하고 navigation/power 정책 결과를 조합해 다음 command를 반환한다. | FR-06 to FR-26 |

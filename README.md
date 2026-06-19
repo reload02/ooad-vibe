@@ -2,6 +2,8 @@
 
 이 프로젝트는 `docs/rvc.pdf`의 RVC Control SW 요구사항을 기반으로 작성한 OOAD 산출물과 C++20 구현이다.
 
+현재 `docs/requirements.md`에는 R3/R4 요구사항(후방 interrupt, 먼지 제자리 `Boost` 회전, 전진/후진 toggle, persistent dust, 시작 위치 복귀 검증)이 반영되어 있다. C++ 구현과 자동 테스트는 아직 R2 우측 탐색 및 fixed tick dust boost 기준이므로, R3/R4 구현 후 테스트와 분석 문서를 다시 갱신해야 한다.
+
 ## Documents
 
 - `docs/requirements.md`: 유스케이스, FR, NFR, 핵심 제어 규칙
@@ -11,6 +13,9 @@
 - `docs/ood_class_diagram.md`: OOD Class Diagram과 SOLID 분석
 - `docs/sdd.md`: Software Design Description
 - `docs/traceability.md`: 요구사항, 설계, 테스트 추적성
+- `docs/scenario_catalog.md`: 시나리오와 요구사항 매핑
+- `docs/test_results.md`: 최신 테스트 실행 결과와 R3/R4 추가 검증 필요 항목
+- `docs/static_analysis_results.md`: 정적 분석 결과 및 R3/R4 재분석 포인트
 
 ## Build
 

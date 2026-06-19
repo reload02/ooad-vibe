@@ -80,7 +80,7 @@ sequenceDiagram
 
 ## 6. SSD-04 Boost Cleaning On Dust
 
-[R3-변경] R3 기준에서는 먼지 감지 시 fixed boost timer를 시작하지 않는다. RVC는 현재 주행 방향에 따라 필요한 제자리 회전 동안만 `Boost`를 사용하고, 회전 후 전진/후진 주행 방향을 toggle한다. [R2-기존] ~~먼지 감지 후 설정 tick 동안 `Boost`를 유지한다.~~
+[R3-변경] R3 기준에서는 먼지 감지 시 fixed boost period를 시작하지 않는다. RVC는 현재 주행 방향에 따라 필요한 제자리 회전 동안만 `Boost`를 사용하고, 회전 후 전진/후진 주행 방향을 toggle한다. [R2-기존] ~~먼지 감지 후 설정 tick 동안 `Boost`를 유지한다.~~
 
 ```mermaid
 sequenceDiagram
@@ -188,7 +188,7 @@ sequenceDiagram
 | Operation | Related FR | Notes |
 | --- | --- | --- |
 | `startCleaning()` | FR-01, FR-03 | 실행 상태를 시작하며 실제 전진/청소 명령은 다음 `tick()`에서 생성된다. |
-| `stopCleaning()` | FR-02 | 실행 상태와 boost timer를 초기화하며 다음 `tick()`에서 `Stop`/`Off` command가 생성된다. |
+| `stopCleaning()` | FR-02 | 실행 상태와 dust/cleaner 정책 상태를 초기화하며 다음 `tick()`에서 `Stop`/`Off` command가 생성된다. |
 | `onFrontObstacleInterrupt()` | FR-04, FR-05 | interrupt는 다음 `tick()`보다 먼저 들어올 수 있다. |
 | `onRearObstacleInterrupt()` | FR-19, FR-20 | [R3-추가] 후진 주행 중 후방 장애물 interrupt가 다음 `tick()` 판단에 반영된다. |
 | `tick(periodicSensors)` | FR-06 | Digital Clock의 제어 주기마다 호출된다. |

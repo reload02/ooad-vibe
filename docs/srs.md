@@ -731,7 +731,7 @@ sequenceDiagram
 | `Rvc::stopCleaning()` | FR-02 | [추가] 사용자 중지 요청을 controller에 위임한다. |
 | `Rvc::tick()` | FR-04 to FR-26 | [추가] adapter에서 sensor/event를 읽고 controller command를 adapter에 적용한다. |
 | `startCleaning()` | FR-01, FR-03 | 실행 상태를 시작하며 실제 전진/청소 명령은 다음 `tick()`에서 생성된다. |
-| `stopCleaning()` | FR-02 | 실행 상태와 boost timer를 초기화하며 다음 `tick()`에서 `Stop`/`Off` command가 생성된다. |
+| `stopCleaning()` | FR-02 | 실행 상태와 dust/cleaner 정책 상태를 초기화하며 다음 `tick()`에서 `Stop`/`Off` command가 생성된다. |
 | `onFrontObstacleInterrupt()` | FR-04, FR-05 | interrupt는 다음 `tick()`보다 먼저 들어올 수 있다. |
 | `onRearObstacleInterrupt()` | FR-19, FR-20 | [R3-추가] 후진 중 rear interrupt는 다음 `tick()`보다 먼저 들어올 수 있다. |
 | `tick(periodicSensors)` | FR-06 | Digital Clock의 제어 주기마다 호출된다. |

@@ -9,7 +9,7 @@
 | 빌드 디렉터리 | `build-ninja` |
 | 테스트 프레임워크 | CTest, GoogleTest |
 | 전체 결과 | 64 passed / 0 failed |
-| 총 실행 시간 | 3.03 sec |
+| 총 실행 시간 | 2.07 sec |
 | 검증 범위 | 현재 구현의 R2 우측 탐색, `Rvc`/adapter orchestration, fixed tick dust boost, 회피/탈출 중 cleaner off 정책 |
 | R3/R4 상태 | 요구사항과 설계 문서에는 반영되었지만 후방 interrupt, dust rotation, cleaner `Normal` 기본 정책, persistent dust, 시작 위치 복귀 검증 테스트는 추가 필요 |
 

@@ -3,6 +3,8 @@
 이 문서는 R2의 핵심 변경사항을 변경 전/후 관점으로 정리한다.
 핵심 메시지는 **우측 센서 기반 판단 제거**와 **`TurnRight` 후 전방 센서를 재사용하는 우측 탐색 정책 도입**이다.
 
+> 최신 요구사항은 이후 R3/R4에서 후방 interrupt, dust rotation, persistent dust, 시작 위치 복귀 검증까지 확장되었다. 최신 추적성은 `docs/requirements.md`, `docs/srs.md`, `docs/sdd.md`, `docs/traceability.md`를 기준으로 한다.
+
 ## 1. 핵심 변경 요약
 
 | 구분 | 변경 전 | 변경 후 |
