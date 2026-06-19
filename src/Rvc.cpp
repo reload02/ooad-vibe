@@ -26,6 +26,11 @@ Command Rvc::tick() {
         controller_.onFrontObstacleInterrupt();
     }
 
+    lastBackwardObstacleInterrupt_ = hardwareAdapter_->hasBackwardObstacleInterrupt();
+    if (lastBackwardObstacleInterrupt_) {
+        controller_.onBackwardObstacleInterrupt();
+    }
+
     lastPeriodicSensors_ = hardwareAdapter_->readPeriodicSensors();
     lastCommand_ = controller_.tick(lastPeriodicSensors_);
     hardwareAdapter_->applyCommand(lastCommand_);
@@ -34,6 +39,10 @@ Command Rvc::tick() {
 
 bool Rvc::lastFrontObstacleInterrupt() const {
     return lastFrontObstacleInterrupt_;
+}
+
+bool Rvc::lastBackwardObstacleInterrupt() const {
+    return lastBackwardObstacleInterrupt_;
 }
 
 const PeriodicSensorData& Rvc::lastPeriodicSensors() const {

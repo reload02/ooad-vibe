@@ -33,6 +33,8 @@ enum class ControllerState {
     RightProbing,
     EscapeAligning,
     Escaping,
+    DustSpinning,
+    DustLeaving,
 };
 
 enum class RightProbeState {
@@ -56,6 +58,7 @@ struct PeriodicSensorData {
 
 struct SensorSnapshot {
     bool frontObstacle{false};
+    bool backwardObstacle{false};
     bool leftObstacle{false};
     RightProbeState rightProbe{RightProbeState::None};
     bool dustDetected{false};

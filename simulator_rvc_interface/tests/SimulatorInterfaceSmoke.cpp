@@ -100,15 +100,29 @@ int main() {
     sensorController.FrontObstacleDetected();
     sensorController.ChecknPowerUp();
     motorController.MCMove();
-    if (motor.leftCount != 1 || cleaner.turnedOn) {
+    if (motor.leftCount != 1 || !cleaner.turnedOn) {
         return fail(2);
     }
 
     dustSensor.value = true;
     sensorController.ChecknPowerUp();
+
+    // R3 먼지 감지 틱 1: 180도 회전 1틱째 (TurnRight / Boost)
     motorController.MCMove();
-    if (motor.forwardCount != 2 || !cleaner.turnedOn || !cleaner.boosted) {
+    if (motor.rightCount != 1 || motor.forwardCount != 1 || !cleaner.turnedOn || !cleaner.boosted) {
         return fail(3);
+    }
+
+    // R3 먼지 감지 틱 2: 180도 회전 2틱째 (TurnRight / Boost)
+    motorController.MCMove();
+    if (motor.rightCount != 2 || motor.forwardCount != 1 || !cleaner.turnedOn || !cleaner.boosted) {
+        return fail(5);
+    }
+
+    // R3 먼지 감지 틱 3: 이탈 틱 (Forward / Normal)
+    motorController.MCMove();
+    if (motor.forwardCount != 2 || !cleaner.turnedOn || cleaner.boosted) {
+        return fail(6);
     }
 
     powerController.turnOff();

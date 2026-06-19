@@ -9,12 +9,17 @@ namespace {
 class FakeHardwareAdapter final : public rvc::RvcHardwareAdapter {
 public:
     bool frontObstacle{false};
+    bool backwardObstacle{false};
     rvc::PeriodicSensorData sensors{};
     rvc::Command appliedCommand{};
     int applyCount{0};
 
     [[nodiscard]] bool hasFrontObstacleInterrupt() const override {
         return frontObstacle;
+    }
+
+    [[nodiscard]] bool hasBackwardObstacleInterrupt() const override {
+        return backwardObstacle;
     }
 
     [[nodiscard]] rvc::PeriodicSensorData readPeriodicSensors() const override {
@@ -44,7 +49,7 @@ TEST(RvcTest, TickReadsAdapterInputsAndAppliesControllerCommand) {
     EXPECT_TRUE(rvc.lastFrontObstacleInterrupt());
     EXPECT_FALSE(rvc.lastPeriodicSensors().leftObstacle);
     EXPECT_EQ(command.motion, rvc::Motion::TurnLeft);
-    EXPECT_EQ(command.cleaningPower, rvc::CleaningPower::Off);
+    EXPECT_EQ(command.cleaningPower, rvc::CleaningPower::Normal); // R3: 회전 중에도 클리너 온 유지
     EXPECT_EQ(adapterView->applyCount, 1);
     EXPECT_EQ(adapterView->appliedCommand.motion, rvc::Motion::TurnLeft);
 }

@@ -10,12 +10,11 @@ public:
 
     void reset();
 
-    [[nodiscard]] CleaningPower update(bool dustDetected);
+    [[nodiscard]] CleaningPower update(ControllerState state, bool dustDetected);
     [[nodiscard]] int boostTicksRemaining() const;
 
 private:
     int dustBoostTicks_{0};
-    int boostTicksRemaining_{0};
 };
 
 }  // namespace rvc

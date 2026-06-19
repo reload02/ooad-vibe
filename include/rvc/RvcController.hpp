@@ -17,6 +17,7 @@ public:
     void startCleaning();
     void stopCleaning();
     void onFrontObstacleInterrupt();
+    void onBackwardObstacleInterrupt();
 
     [[nodiscard]] Command tick(const PeriodicSensorData& periodicSensors);
     [[nodiscard]] SensorSnapshot readPeriodicSensors(const PeriodicSensorData& periodicSensors) const;
@@ -32,6 +33,7 @@ private:
     CleaningPowerPolicy cleaningPower_;
     bool running_{false};
     bool frontInterruptPending_{false};
+    bool backwardInterruptPending_{false};
 };
 
 }  // namespace rvc

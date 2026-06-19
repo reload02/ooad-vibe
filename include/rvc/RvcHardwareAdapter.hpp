@@ -9,6 +9,7 @@ public:
     virtual ~RvcHardwareAdapter() = default;
 
     [[nodiscard]] virtual bool hasFrontObstacleInterrupt() const = 0;
+    [[nodiscard]] virtual bool hasBackwardObstacleInterrupt() const = 0;
     [[nodiscard]] virtual PeriodicSensorData readPeriodicSensors() const = 0;
     virtual void applyCommand(const Command& command) = 0;
 };

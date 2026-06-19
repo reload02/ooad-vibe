@@ -16,6 +16,7 @@ public:
     [[nodiscard]] Command tick();
 
     [[nodiscard]] bool lastFrontObstacleInterrupt() const;
+    [[nodiscard]] bool lastBackwardObstacleInterrupt() const;
     [[nodiscard]] const PeriodicSensorData& lastPeriodicSensors() const;
     [[nodiscard]] const Command& lastCommand() const;
 
@@ -23,6 +24,7 @@ private:
     RvcController controller_;
     std::unique_ptr<RvcHardwareAdapter> hardwareAdapter_;
     bool lastFrontObstacleInterrupt_{false};
+    bool lastBackwardObstacleInterrupt_{false};
     PeriodicSensorData lastPeriodicSensors_{};
     Command lastCommand_{};
 };

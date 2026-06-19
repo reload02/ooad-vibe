@@ -23,6 +23,10 @@ target_include_directories(rvc_core
 
 target_compile_features(rvc_core PUBLIC cxx_std_20)
 
+if(MSVC)
+    target_compile_options(rvc_core PUBLIC /FS)
+endif()
+
 add_executable(rvc_simulator
     src/main.cpp
 )

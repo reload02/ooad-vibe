@@ -92,6 +92,10 @@ std::string toString(ControllerState state) {
             return "EscapeAligning";
         case ControllerState::Escaping:
             return "Escaping";
+        case ControllerState::DustSpinning:
+            return "DustSpinning";
+        case ControllerState::DustLeaving:
+            return "DustLeaving";
     }
     return "Unknown";
 }

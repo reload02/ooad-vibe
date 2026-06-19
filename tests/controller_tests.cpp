@@ -67,7 +67,6 @@ TEST(RvcControllerTest, StopCleaningReturnsStopAndOff) {
     EXPECT_EQ(controller.state(), ControllerState::Idle);
     EXPECT_EQ(controller.rightProbeState(), RightProbeState::None);
     EXPECT_FALSE(controller.isRunning());
-    EXPECT_EQ(controller.boostTicksRemaining(), 0);
 }
 
 TEST(RvcControllerTest, FrontInterruptTriggersImmediateAvoidanceWhenLeftIsOpen) {
@@ -81,7 +80,7 @@ TEST(RvcControllerTest, FrontInterruptTriggersImmediateAvoidanceWhenLeftIsOpen) 
     });
 
     EXPECT_EQ(command.motion, Motion::TurnLeft);
-    EXPECT_EQ(command.cleaningPower, CleaningPower::Off);
+    EXPECT_EQ(command.cleaningPower, CleaningPower::Normal); // R3: 회전 중에도 클리너 On
     EXPECT_EQ(controller.state(), ControllerState::Avoiding);
     EXPECT_EQ(controller.rightProbeState(), RightProbeState::None);
 }
@@ -101,7 +100,7 @@ TEST(RvcControllerTest, FrontInterruptIsConsumedAfterOneTick) {
     });
 
     EXPECT_EQ(avoid.motion, Motion::TurnLeft);
-    EXPECT_EQ(avoid.cleaningPower, CleaningPower::Off);
+    EXPECT_EQ(avoid.cleaningPower, CleaningPower::Normal); // R3: 회전 중에도 클리너 On
     EXPECT_EQ(resumed.motion, Motion::Forward);
     EXPECT_EQ(resumed.cleaningPower, CleaningPower::Normal);
     EXPECT_EQ(controller.state(), ControllerState::Cleaning);
@@ -118,7 +117,7 @@ TEST(RvcControllerTest, RightProbeStartsWhenLeftBlocked) {
     });
 
     EXPECT_EQ(command.motion, Motion::TurnRight);
-    EXPECT_EQ(command.cleaningPower, CleaningPower::Off);
+    EXPECT_EQ(command.cleaningPower, CleaningPower::Normal); // R3: 회전 중에도 클리너 On
     EXPECT_EQ(controller.state(), ControllerState::RightProbing);
     EXPECT_EQ(controller.rightProbeState(), RightProbeState::Checking);
 }
@@ -138,6 +137,7 @@ TEST(RvcControllerTest, RightProbeOpenResumesForward) {
     });
 
     EXPECT_EQ(probe.motion, Motion::TurnRight);
+    EXPECT_EQ(probe.cleaningPower, CleaningPower::Normal); // R3: 온 유지
     EXPECT_EQ(resumed.motion, Motion::Forward);
     EXPECT_EQ(resumed.cleaningPower, CleaningPower::Normal);
     EXPECT_EQ(controller.state(), ControllerState::Cleaning);
@@ -169,9 +169,9 @@ TEST(RvcControllerTest, RightProbeBlockedAlignsBeforeEscaping) {
 
     EXPECT_EQ(probe.motion, Motion::TurnRight);
     EXPECT_EQ(align.motion, Motion::TurnLeft);
-    EXPECT_EQ(align.cleaningPower, CleaningPower::Off);
+    EXPECT_EQ(align.cleaningPower, CleaningPower::Normal); // R3: 온 유지
     EXPECT_EQ(backward.motion, Motion::Backward);
-    EXPECT_EQ(backward.cleaningPower, CleaningPower::Off);
+    EXPECT_EQ(backward.cleaningPower, CleaningPower::Normal); // R3: 온 유지
     EXPECT_EQ(controller.state(), ControllerState::Escaping);
     EXPECT_EQ(controller.rightProbeState(), RightProbeState::Blocked);
 }
@@ -200,8 +200,9 @@ TEST(RvcControllerTest, EscapingBacksUpThenReprobesRight) {
     });
 
     EXPECT_EQ(backward.motion, Motion::Backward);
+    EXPECT_EQ(backward.cleaningPower, CleaningPower::Normal); // R3: 온 유지
     EXPECT_EQ(reprobe.motion, Motion::TurnRight);
-    EXPECT_EQ(reprobe.cleaningPower, CleaningPower::Off);
+    EXPECT_EQ(reprobe.cleaningPower, CleaningPower::Normal); // R3: 온 유지
     EXPECT_EQ(controller.state(), ControllerState::RightProbing);
     EXPECT_EQ(controller.rightProbeState(), RightProbeState::Checking);
 }
@@ -230,117 +231,69 @@ TEST(RvcControllerTest, EscapingTurnsLeftWhenLeftOpens) {
     });
 
     EXPECT_EQ(sideExit.motion, Motion::TurnLeft);
-    EXPECT_EQ(sideExit.cleaningPower, CleaningPower::Off);
+    EXPECT_EQ(sideExit.cleaningPower, CleaningPower::Normal); // R3: 온 유지
     EXPECT_EQ(controller.state(), ControllerState::Avoiding);
     EXPECT_EQ(controller.rightProbeState(), RightProbeState::None);
 }
 
-TEST(RvcControllerTest, RightProbeWithDustKeepsCleanerOffButPreservesBoostBudget) {
-    RvcController controller(ControllerConfig{.dustBoostTicks = 3});
+TEST(RvcControllerTest, DustSpinBoostSequenceAndEscape) {
+    RvcController controller;
+    controller.startCleaning();
+
+    // 1. 먼지 감지 -> 180도 회전 1틱째 (TurnRight / Boost)
+    const Command tick1 = controller.tick(PeriodicSensorData{
+        .leftObstacle = false,
+        .dustDetected = true,
+    });
+    EXPECT_EQ(tick1.motion, Motion::TurnRight);
+    EXPECT_EQ(tick1.cleaningPower, CleaningPower::Boost);
+    EXPECT_EQ(controller.state(), ControllerState::DustSpinning);
+
+    // 2. 180도 회전 2틱째 (TurnRight / Boost)
+    const Command tick2 = controller.tick(PeriodicSensorData{
+        .leftObstacle = false,
+        .dustDetected = true, // 불소멸되어 먼지는 여전히 존재
+    });
+    EXPECT_EQ(tick2.motion, Motion::TurnRight);
+    EXPECT_EQ(tick2.cleaningPower, CleaningPower::Boost);
+    EXPECT_EQ(controller.state(), ControllerState::DustSpinning);
+
+    // 3. 이탈 틱 (Backward / Normal / 먼지 감지 강제 무시)
+    const Command tick3 = controller.tick(PeriodicSensorData{
+        .leftObstacle = false,
+        .dustDetected = true, // 먼지가 계속 감지되지만 무시해야 함
+    });
+    EXPECT_EQ(tick3.motion, Motion::Backward);
+    EXPECT_EQ(tick3.cleaningPower, CleaningPower::Normal);
+    EXPECT_EQ(controller.state(), ControllerState::DustLeaving);
+
+    // 4. 원래 상태(Cleaning) 복귀 틱
+    const Command tick4 = controller.tick(PeriodicSensorData{
+        .leftObstacle = false,
+        .dustDetected = false,
+    });
+    EXPECT_EQ(tick4.motion, Motion::Forward);
+    EXPECT_EQ(tick4.cleaningPower, CleaningPower::Normal);
+    EXPECT_EQ(controller.state(), ControllerState::Cleaning);
+}
+
+TEST(RvcControllerTest, EscapingStopsOnBackwardObstacleInterrupt) {
+    RvcController controller;
     controller.startCleaning();
     controller.onFrontObstacleInterrupt();
 
-    const Command probe = controller.tick(PeriodicSensorData{
-        .leftObstacle = true,
-        .dustDetected = true,
-    });
-    const int remainingAfterProbeDust = controller.boostTicksRemaining();
-    const Command resumed = controller.tick(PeriodicSensorData{
-        .leftObstacle = true,
-        .dustDetected = false,
-    });
-
-    EXPECT_EQ(probe.motion, Motion::TurnRight);
-    EXPECT_EQ(probe.cleaningPower, CleaningPower::Off);
-    EXPECT_EQ(remainingAfterProbeDust, 3);
-    EXPECT_EQ(resumed.motion, Motion::Forward);
-    EXPECT_EQ(resumed.cleaningPower, CleaningPower::Boost);
-    EXPECT_EQ(controller.boostTicksRemaining(), 2);
-}
-
-TEST(RvcControllerTest, DustBoostLastsConfiguredTicks) {
-    RvcController controller(ControllerConfig{.dustBoostTicks = 3});
-    controller.startCleaning();
-
-    const Command dustTick = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .dustDetected = true,
-    });
-    const Command boostTick2 = controller.tick(PeriodicSensorData{});
-    const Command boostTick3 = controller.tick(PeriodicSensorData{});
-    const Command normalTick = controller.tick(PeriodicSensorData{});
-
-    EXPECT_EQ(dustTick.cleaningPower, CleaningPower::Boost);
-    EXPECT_EQ(boostTick2.cleaningPower, CleaningPower::Boost);
-    EXPECT_EQ(boostTick3.cleaningPower, CleaningPower::Boost);
-    EXPECT_EQ(normalTick.cleaningPower, CleaningPower::Normal);
-}
-
-TEST(RvcControllerTest, DustDetectionRefreshesBoostBudget) {
-    RvcController controller(ControllerConfig{.dustBoostTicks = 3});
-    controller.startCleaning();
-
-    const Command firstDust = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .dustDetected = true,
-    });
-    const Command agingBoost = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .dustDetected = false,
-    });
-    const int agedRemaining = controller.boostTicksRemaining();
-    const Command refreshedDust = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .dustDetected = true,
-    });
-    const int refreshedRemaining = controller.boostTicksRemaining();
-
-    EXPECT_EQ(firstDust.cleaningPower, CleaningPower::Boost);
-    EXPECT_EQ(agingBoost.cleaningPower, CleaningPower::Boost);
-    EXPECT_EQ(agedRemaining, 2);
-    EXPECT_EQ(refreshedDust.cleaningPower, CleaningPower::Boost);
-    EXPECT_EQ(refreshedRemaining, 3);
-}
-
-TEST(RvcControllerTest, ZeroTickBoostConfigurationDoesNotBoostOnDust) {
-    RvcController controller(ControllerConfig{.dustBoostTicks = 0});
-    controller.startCleaning();
-
-    const Command command = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .dustDetected = true,
-    });
-
-    EXPECT_EQ(command.motion, Motion::Forward);
-    EXPECT_EQ(command.cleaningPower, CleaningPower::Normal);
-    EXPECT_EQ(controller.boostTicksRemaining(), 0);
-}
-
-TEST(RvcControllerTest, AvoidanceOutputStaysOffWhileBoostStateIsMaintained) {
-    RvcController controller(ControllerConfig{.dustBoostTicks = 4});
-    controller.startCleaning();
-
-    const Command dustTick = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .dustDetected = true,
-    });
-
+    // Escaping 상태 유도
+    (void)controller.tick(PeriodicSensorData{.leftObstacle = true});
     controller.onFrontObstacleInterrupt();
-    const Command avoidTick = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .dustDetected = false,
-    });
-    const Command resumedTick = controller.tick(PeriodicSensorData{
-        .leftObstacle = false,
-        .dustDetected = false,
-    });
+    (void)controller.tick(PeriodicSensorData{.leftObstacle = true}); // EscapeAligning
 
-    EXPECT_EQ(dustTick.motion, Motion::Forward);
-    EXPECT_EQ(dustTick.cleaningPower, CleaningPower::Boost);
-    EXPECT_EQ(avoidTick.motion, Motion::TurnLeft);
-    EXPECT_EQ(avoidTick.cleaningPower, CleaningPower::Off);
-    EXPECT_EQ(resumedTick.motion, Motion::Forward);
-    EXPECT_EQ(resumedTick.cleaningPower, CleaningPower::Boost);
+    // 후방 장애물 인터럽트 트리거
+    controller.onBackwardObstacleInterrupt();
+    const Command command = controller.tick(PeriodicSensorData{.leftObstacle = true});
+
+    EXPECT_EQ(command.motion, Motion::Stop);
+    EXPECT_EQ(command.cleaningPower, CleaningPower::Normal); // 클리너 온 유지
+    EXPECT_EQ(controller.state(), ControllerState::Escaping);
 }
 
 }  // namespace

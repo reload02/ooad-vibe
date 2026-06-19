@@ -12,6 +12,7 @@ public:
     explicit SimulatedHardwareAdapter(std::vector<std::string> grid);
 
     [[nodiscard]] bool hasFrontObstacleInterrupt() const override;
+    [[nodiscard]] bool hasBackwardObstacleInterrupt() const override;
     [[nodiscard]] PeriodicSensorData readPeriodicSensors() const override;
     void applyCommand(const Command& command) override;
 

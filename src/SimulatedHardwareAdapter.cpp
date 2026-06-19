@@ -69,6 +69,10 @@ bool SimulatedHardwareAdapter::hasFrontObstacleInterrupt() const {
     return isObstacle(forwardPosition());
 }
 
+bool SimulatedHardwareAdapter::hasBackwardObstacleInterrupt() const {
+    return isObstacle(backwardPosition());
+}
+
 PeriodicSensorData SimulatedHardwareAdapter::readPeriodicSensors() const {
     return PeriodicSensorData{
         .leftObstacle = isObstacle(adjacent(robot_, turnLeft(direction_))),
@@ -166,7 +170,8 @@ void SimulatedHardwareAdapter::cleanCurrentCell(const Command& command) {
         return;
     }
 
-    grid_[robot_.row][robot_.col] = '.';
+    // R3 규칙: 청소 시에도 먼지(*)가 사라지거나 제거되지 않고 계속 유지됨.
+    // grid_[robot_.row][robot_.col] = '.';
     ++dustCleaned_;
 }
 

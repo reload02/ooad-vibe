@@ -23,6 +23,9 @@ public:
 private:
     ControllerState state_{ControllerState::Idle};
     RightProbeState rightProbe_{RightProbeState::None};
+    bool wasForward_{true};
+    ControllerState savedState_{ControllerState::Idle};
+    int spinTicks_{0};
 };
 
 }  // namespace rvc

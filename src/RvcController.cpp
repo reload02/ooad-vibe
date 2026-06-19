@@ -7,11 +7,9 @@ namespace rvc {
 namespace {
 
 [[nodiscard]] Command makeCommand(Motion motion, CleaningPower power, std::string reason) {
-    const CleaningPower outputPower = motion == Motion::Forward ? power : CleaningPower::Off;
-
     return Command{
         .motion = motion,
-        .cleaningPower = outputPower,
+        .cleaningPower = power,
         .reason = std::move(reason),
     };
 }
@@ -24,18 +22,26 @@ void RvcController::startCleaning() {
     running_ = true;
     navigation_.startCleaning();
     frontInterruptPending_ = false;
+    backwardInterruptPending_ = false;
 }
 
 void RvcController::stopCleaning() {
     running_ = false;
     navigation_.stopCleaning();
     frontInterruptPending_ = false;
+    backwardInterruptPending_ = false;
     cleaningPower_.reset();
 }
 
 void RvcController::onFrontObstacleInterrupt() {
     if (running_) {
         frontInterruptPending_ = true;
+    }
+}
+
+void RvcController::onBackwardObstacleInterrupt() {
+    if (running_) {
+        backwardInterruptPending_ = true;
     }
 }
 
@@ -47,12 +53,14 @@ Command RvcController::tick(const PeriodicSensorData& periodicSensors) {
     const SensorSnapshot snapshot = readPeriodicSensors(periodicSensors);
     Command command = decideNextCommand(snapshot);
     frontInterruptPending_ = false;
+    backwardInterruptPending_ = false;
     return command;
 }
 
 SensorSnapshot RvcController::readPeriodicSensors(const PeriodicSensorData& periodicSensors) const {
     return SensorSnapshot{
         .frontObstacle = frontInterruptPending_,
+        .backwardObstacle = backwardInterruptPending_,
         .leftObstacle = periodicSensors.leftObstacle,
         .rightProbe = navigation_.rightProbeState(),
         .dustDetected = periodicSensors.dustDetected,
@@ -64,8 +72,8 @@ Command RvcController::decideNextCommand(const SensorSnapshot& snapshot) {
         return makeCommand(Motion::Stop, CleaningPower::Off, "controller idle");
     }
 
-    const CleaningPower power = cleaningPower_.update(snapshot.dustDetected);
     const NavigationDecision navigationDecision = navigation_.decide(snapshot);
+    const CleaningPower power = cleaningPower_.update(navigation_.state(), snapshot.dustDetected);
     return makeCommand(navigationDecision.motion, power, navigationDecision.reason);
 }
 
